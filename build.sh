@@ -1,3 +1,3 @@
 #!/bin/bash
 go mod tidy
-go build -o qc cmd/qc/main.go
+go build -v -o qc cmd/qc/main.go
