@@ -13,11 +13,12 @@ type Client struct {
     baseURL string
 }
 
-func NewClient(auth *auth.Auth) *Client {
+// NewClient creates a new Client instance
+func NewClient(auth *auth.Auth, quayURL string) *Client {
     return &Client{
         auth:    auth,
         client:  &http.Client{},
-        baseURL: "https://quay.io/api/v1",
+        baseURL: fmt.Sprintf("%s/api/v1", quayURL),
     }
 }
 

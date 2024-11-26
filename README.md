@@ -30,6 +30,34 @@ export QUAYREGISTRY=https://custom.quay.io
 
 This implementation provides a flexible and maintainable way to handle configuration with proper precedence and multiple configuration sources.
 
+You can specify the organization in multiple ways:
+
+1. Command line:
+```bash
+./qc -organisation myorg
+```
+
+2. Environment variable:
+```bash
+export QUAYORG=myorg
+./qc
+```
+
+3. Configuration file:
+```yaml
+registry:
+  organisation: myorg
+  ...
+```
+
+The priority remains:
+1. Command-line arguments
+2. Environment variables
+3. YAML configuration file
+4. Hardcoded defaults
+
+This provides a flexible way to specify the organization while maintaining backward compatibility with the existing implementation.
+
 
 ## To use this new configuration system:
 

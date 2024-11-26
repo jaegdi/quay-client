@@ -16,13 +16,14 @@ import (
 func main() {
     // CLI flags
     showMan := flag.Bool("man", false, "Show manual page")
-    secretName := flag.String("secret", "quay-admin", "Secret name containing Quay credentials")
-    namespace := flag.String("namespace", "scp-build", "Namespace containing the secret")
+    secretName := flag.String("secret", "", "Secret name containing Quay credentials")
+    namespace := flag.String("namespace", "", "Namespace containing the secret")
     org := flag.String("organisation", "", "Organisation name")
     repo := flag.String("repository", "", "Repository name")
     tag := flag.String("tag", "", "Tag name")
     delete := flag.Bool("delete", false, "Delete specified tag")
     regex := flag.String("regex", "", "Regex pattern to filter repositories")
+    quayURL := flag.String("registry", "", "Quay registry URL")
 
     flag.Parse()
 
@@ -38,7 +39,7 @@ func main() {
     }
 
     // Initialize configuration
-    cfg, err := config.NewConfig(kubeconfig, *secretName, *namespace)
+    cfg, err := config.NewConfig(kubeconfig, *secretName, *namespace, *quayURL, *org)
     if err != nil {
         fmt.Printf("Failed to initialize config: %v\n", err)
         os.Exit(1)
@@ -52,24 +53,24 @@ func main() {
     }
 
     // Initialize client
-    client := client.NewClient(auth)
+    client := client.NewClient(auth, cfg.QuayURL)
 
     // Perform operations based on flags
     ops := operations.NewOperations(client)
 
-    if *delete && *org != "" && *repo != "" && *tag != "" {
-        err = ops.DeleteTag(*org, *repo, *tag)
+    if *delete && cfg.Organisation != "" && *repo != "" && *tag != "" {
+        err = ops.DeleteTag(cfg.Organisation, *repo, *tag)
         if err != nil {
             fmt.Printf("Failed to delete tag: %v\n", err)
             os.Exit(1)
         }
-        fmt.Printf("Successfully deleted tag %s from %s/%s\n", *tag, *org, *repo)
+        fmt.Printf("Successfully deleted tag %s from %s/%s\n", *tag, cfg.Organisation, *repo)
         return
     }
 
-    if *org != "" {
+    if cfg.Organisation != "" {
         if *regex != "" {
-            repos, err := ops.ListRepositoriesByRegex(*org, *regex)
+            repos, err := ops.ListRepositoriesByRegex(cfg.Organisation, *regex)
             if err != nil {
                 fmt.Printf("Failed to list repositories: %v\n", err)
                 os.Exit(1)
@@ -80,7 +81,7 @@ func main() {
             return
         }
 
-        repos, err := ops.ListOrganizationRepositories(*org)
+        repos, err := ops.ListOrganizationRepositories(cfg.Organisation)
         if err != nil {
             fmt.Printf("Failed to list repositories: %v\n", err)
             os.Exit(1)

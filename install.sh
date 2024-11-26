@@ -10,6 +10,7 @@ registry:
   url: https://quay.io
   secret_name: quay-admin
   namespace: scp-build
+  organisation: ""
 EOF
 
 echo "Configuration file created at ~/.config/qc/config.yaml"

@@ -28,6 +28,7 @@ CONFIGURATION
           url: https://quay.io
           secret_name: quay-admin
           namespace: scp-build
+          organisation: myorg
 
 ENVIRONMENT
     KUBECONFIG
@@ -36,18 +37,24 @@ ENVIRONMENT
     QUAYREGISTRY
         URL of the Quay registry (used if -registry parameter is not provided)
 
+    QUAYORG
+        Default organization to use (used if -organisation parameter is not provided)
+
 OPTIONS
     -man
         Show this manual page
 
     -registry string
-        Quay registry URL (default: from config or https://quay.io)
+        Quay registry URL (default: from $QUAYREGISTRY or config)
 
     -secret string
-        Secret name containing Quay credentials (default: from config or "quay-admin")
+        Secret name containing Quay credentials (default: from config)
 
     -namespace string
-        Namespace containing the secret (default: from config or "scp-build")
+        Namespace containing the secret (default: from config)
+
+    -organisation string
+        Organisation name (default: from $QUAYORG or config)
 
     ... [rest of the manual remains the same] ...
 `)

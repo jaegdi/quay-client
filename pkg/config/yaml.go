@@ -9,9 +9,10 @@ import (
 
 type YamlConfig struct {
     Registry struct {
-        URL        string `yaml:"url"`
-        SecretName string `yaml:"secret_name"`
-        Namespace  string `yaml:"namespace"`
+        URL          string `yaml:"url"`
+        SecretName   string `yaml:"secret_name"`
+        Namespace    string `yaml:"namespace"`
+        Organisation string `yaml:"organisation"`
     } `yaml:"registry"`
 }
 
@@ -19,9 +20,9 @@ type YamlConfig struct {
 func LoadYamlConfig() (*YamlConfig, error) {
     // Define possible config file locations
     configLocations := []string{
-        "config.yaml",                                              // Current directory
-        filepath.Join(os.Getenv("HOME"), ".config", "qc", "config.yaml"), // User's config directory
-        "/etc/qc/config.yaml",                                      // System-wide config
+        "config.yaml",
+        filepath.Join(os.Getenv("HOME"), ".config", "qc", "config.yaml"),
+        "/etc/qc/config.yaml",
     }
 
     var configFile string
@@ -36,13 +37,15 @@ func LoadYamlConfig() (*YamlConfig, error) {
     if configFile == "" {
         return &YamlConfig{
             Registry: struct {
-                URL        string `yaml:"url"`
-                SecretName string `yaml:"secret_name"`
-                Namespace  string `yaml:"namespace"`
+                URL          string `yaml:"url"`
+                SecretName   string `yaml:"secret_name"`
+                Namespace    string `yaml:"namespace"`
+                Organisation string `yaml:"organisation"`
             }{
-                URL:        "https://quay.io",
-                SecretName: "quay-admin",
-                Namespace:  "scp-build",
+                URL:          "https://quay.io",
+                SecretName:   "quay-admin",
+                Namespace:    "scp-build",
+                Organisation: "",
             },
         }, nil
     }

@@ -2,3 +2,4 @@ registry:
   url: https://quay.io
   secret_name: quay-admin
   namespace: scp-build
+  organisation: ""

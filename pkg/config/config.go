@@ -8,15 +8,16 @@ import (
 )
 
 type Config struct {
-    KubeConfig  string
-    SecretName  string
-    Namespace   string
-    K8sConfig   *rest.Config
-    QuayURL     string
+    KubeConfig   string
+    SecretName   string
+    Namespace    string
+    K8sConfig    *rest.Config
+    QuayURL      string
+    Organisation string
 }
 
 // NewConfig creates a new Config instance
-func NewConfig(kubeconfig, secretName, namespace, quayURL string) (*Config, error) {
+func NewConfig(kubeconfig, secretName, namespace, quayURL, organisation string) (*Config, error) {
     // Load YAML config first
     yamlConfig, err := LoadYamlConfig()
     if err != nil {
@@ -43,6 +44,14 @@ func NewConfig(kubeconfig, secretName, namespace, quayURL string) (*Config, erro
         namespace = yamlConfig.Registry.Namespace
     }
 
+    // Handle Organisation
+    if organisation == "" {
+        organisation = os.Getenv("QUAYORG")
+        if organisation == "" {
+            organisation = yamlConfig.Registry.Organisation
+        }
+    }
+
     // Load kubernetes configuration
     config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
     if err != nil {
@@ -55,10 +64,11 @@ func NewConfig(kubeconfig, secretName, namespace, quayURL string) (*Config, erro
     }
 
     return &Config{
-        KubeConfig: kubeconfig,
-        SecretName: secretName,
-        Namespace:  namespace,
-        K8sConfig:  config,
-        QuayURL:    quayURL,
+        KubeConfig:   kubeconfig,
+        SecretName:   secretName,
+        Namespace:    namespace,
+        K8sConfig:    config,
+        QuayURL:      quayURL,
+        Organisation: organisation,
     }, nil
 }
