@@ -23,6 +23,7 @@ func main() {
     tag := flag.String("tag", "", "Tag name")
     delete := flag.Bool("delete", false, "Delete specified tag")
     regex := flag.String("regex", "", "Regex pattern to filter repositories")
+    quayURL := flag.String("registry", "", "Quay registry URL (default: $QUAYREGISTRY or https://quay.io)")
 
     flag.Parse()
 
@@ -38,7 +39,7 @@ func main() {
     }
 
     // Initialize configuration
-    cfg, err := config.NewConfig(kubeconfig, *secretName, *namespace)
+    cfg, err := config.NewConfig(kubeconfig, *secretName, *namespace, *quayURL)  // Added quayURL parameter
     if err != nil {
         fmt.Printf("Failed to initialize config: %v\n", err)
         os.Exit(1)
@@ -52,7 +53,7 @@ func main() {
     }
 
     // Initialize client
-    client := client.NewClient(auth)
+    client := client.NewClient(auth, cfg.QuayURL)
 
     // Perform operations based on flags
     ops := operations.NewOperations(client)
