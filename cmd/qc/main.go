@@ -14,91 +14,91 @@ import (
 )
 
 func main() {
-    // CLI flags
-    showMan := flag.Bool("man", false, "Show manual page")
-    secretName := flag.String("secret", "", "Secret name containing Quay credentials")
-    namespace := flag.String("namespace", "", "Namespace containing the secret")
-    org := flag.String("organisation", "", "Organisation name")
-    repo := flag.String("repository", "", "Repository name")
-    tag := flag.String("tag", "", "Tag name")
-    delete := flag.Bool("delete", false, "Delete specified tag")
-    regex := flag.String("regex", "", "Regex pattern to filter repositories")
-    quayURL := flag.String("registry", "", "Quay registry URL")
+	// CLI flags
+	showMan := flag.Bool("man", false, "Show manual page")
+	secretName := flag.String("secret", "", "Secret name containing Quay credentials")
+	namespace := flag.String("namespace", "", "Namespace containing the secret")
+	org := flag.String("organisation", "", "Organisation name")
+	repo := flag.String("repository", "", "Repository name")
+	tag := flag.String("tag", "", "Tag name")
+	delete := flag.Bool("delete", false, "Delete specified tag")
+	regex := flag.String("regex", "", "Regex pattern to filter repositories")
+	quayURL := flag.String("registry", "", "Quay registry URL (default: $QUAYREGISTRY or https://quay.io)")
 
-    flag.Parse()
+	flag.Parse()
 
-    if *showMan {
-        docs.ShowManPage()
-        return
-    }
+	if *showMan {
+		docs.ShowManPage()
+		return
+	}
 
-    // Get KUBECONFIG path
-    kubeconfig := os.Getenv("KUBECONFIG")
-    if kubeconfig == "" {
-        kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
-    }
+	// Get KUBECONFIG path
+	kubeconfig := os.Getenv("KUBECONFIG")
+	if kubeconfig == "" {
+		kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
+	}
 
-    // Initialize configuration
-    cfg, err := config.NewConfig(kubeconfig, *secretName, *namespace, *quayURL, *org)
-    if err != nil {
-        fmt.Printf("Failed to initialize config: %v\n", err)
-        os.Exit(1)
-    }
+	// Initialize configuration
+	cfg, err := config.NewConfig(kubeconfig, *secretName, *namespace, *quayURL, *org)
+	if err != nil {
+		fmt.Printf("Failed to initialize config: %v\n", err)
+		os.Exit(1)
+	}
 
-    // Initialize authentication
-    auth, err := auth.NewAuth(cfg)
-    if err != nil {
-        fmt.Printf("Authentication failed: %v\n", err)
-        os.Exit(1)
-    }
+	// Initialize authentication
+	auth, err := auth.NewAuth(cfg)
+	if err != nil {
+		fmt.Printf("Authentication failed: %v\n", err)
+		os.Exit(1)
+	}
 
-    // Initialize client
-    client := client.NewClient(auth, cfg.QuayURL)
+	// Initialize client
+	client := client.NewClient(auth, cfg.QuayURL)
 
-    // Perform operations based on flags
-    ops := operations.NewOperations(client)
+	// Perform operations based on flags
+	ops := operations.NewOperations(client)
 
-    if *delete && cfg.Organisation != "" && *repo != "" && *tag != "" {
-        err = ops.DeleteTag(cfg.Organisation, *repo, *tag)
-        if err != nil {
-            fmt.Printf("Failed to delete tag: %v\n", err)
-            os.Exit(1)
-        }
-        fmt.Printf("Successfully deleted tag %s from %s/%s\n", *tag, cfg.Organisation, *repo)
-        return
-    }
+	if *delete && cfg.Organisation != "" && *repo != "" && *tag != "" {
+		err = ops.DeleteTag(cfg.Organisation, *repo, *tag)
+		if err != nil {
+			fmt.Printf("Failed to delete tag: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Successfully deleted tag %s from %s/%s\n", *tag, cfg.Organisation, *repo)
+		return
+	}
 
-    if cfg.Organisation != "" {
-        if *regex != "" {
-            repos, err := ops.ListRepositoriesByRegex(cfg.Organisation, *regex)
-            if err != nil {
-                fmt.Printf("Failed to list repositories: %v\n", err)
-                os.Exit(1)
-            }
-            for _, repo := range repos {
-                fmt.Println(repo)
-            }
-            return
-        }
+	if cfg.Organisation != "" {
+		if *regex != "" {
+			repos, err := ops.ListRepositoriesByRegex(cfg.Organisation, *regex)
+			if err != nil {
+				fmt.Printf("Failed to list repositories: %v\n", err)
+				os.Exit(1)
+			}
+			for _, repo := range repos {
+				fmt.Println(repo)
+			}
+			return
+		}
 
-        repos, err := ops.ListOrganizationRepositories(cfg.Organisation)
-        if err != nil {
-            fmt.Printf("Failed to list repositories: %v\n", err)
-            os.Exit(1)
-        }
-        for _, repo := range repos {
-            fmt.Println(repo)
-        }
-        return
-    }
+		repos, err := ops.ListOrganizationRepositories(cfg.Organisation)
+		if err != nil {
+			fmt.Printf("Failed to list repositories: %v\n", err)
+			os.Exit(1)
+		}
+		for _, repo := range repos {
+			fmt.Println(repo)
+		}
+		return
+	}
 
-    // Default: list all organizations
-    orgs, err := ops.ListOrganizations()
-    if err != nil {
-        fmt.Printf("Failed to list organizations: %v\n", err)
-        os.Exit(1)
-    }
-    for _, org := range orgs {
-        fmt.Println(org)
-    }
+	// Default: list all organizations
+	orgs, err := ops.ListOrganizations()
+	if err != nil {
+		fmt.Printf("Failed to list organizations: %v\n", err)
+		os.Exit(1)
+	}
+	for _, org := range orgs {
+		fmt.Println(org)
+	}
 }
