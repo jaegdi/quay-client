@@ -14,20 +14,20 @@ type Operations struct {
 	client *client.Client
 }
 
+type VulnerabilityInfo struct {
+	Name            string                   `json:"Name"`
+	Version         string                   `json:"Version"`
+	BaseScores      []float64                `json:"BaseScores"`
+	CVEIds          []string                 `json:"CVEIds"`
+	Vulnerabilities []featureVulnerabilities `json:"Vulnerabilities"`
+}
+
 type featureVulnerabilities struct {
 	Name        string `json:"Name"`
 	Link        string `json:"Link"`
 	Description string `json:"Description"`
 	FixVersion  string `json:"FixedBy"`
 	Severity    string `json:"Severity"`
-}
-
-type VulnerabilityInfo struct {
-	Name            string                   `json:"Name"`
-	Version         string                   `json:"Version"`
-	BaseScores      []string                 `json:"BaseScores"`
-	CVEIds          []string                 `json:"CVEIds"`
-	Vulnerabilities []featureVulnerabilities `json:"Vulnerabilities"`
 }
 
 type Vulnerabilities struct {
@@ -185,26 +185,33 @@ func (o *Operations) ListRepositoryTags(org, repo string) (TagResults, error) {
 	}
 	for i := range result.Tags {
 		vul, status, err := o.getVulnerabilities(org, repo, result.Tags[i].Digest)
-		if err == nil {
-			if status == "scanned" {
-				var vulnerabilities []featureVulnerabilities
-				var baseScores []string
-				var cveIds []string
-				features := []VulnerabilityInfo{}
-
-				for _, feat := range vul { // Updated path to Features
-					if len(feat.BaseScores) > 0 || len(feat.CVEIds) > 0 || len(feat.Vulnerabilities) > 0 {
-						vulnerabilities = append(vulnerabilities, feat.Vulnerabilities...)
-						baseScores = append(baseScores, feat.BaseScores...)
-						cveIds = append(cveIds, feat.CVEIds...)
-						features = append(features, feat)
-					}
-				}
-
-				result.Tags[i].Vulnerabilities = Vulnerabilities{}
-				result.Tags[i].Vulnerabilities.Status = status
-				result.Tags[i].Vulnerabilities.Data.Layer.Features = vul
+		if err == nil && status == "scanned" {
+			// Erstelle eine neue Vulnerabilities-Struktur
+			vulStruct := Vulnerabilities{
+				Status: status,
+				Data: struct {
+					Layer struct {
+						Features []VulnerabilityInfo `json:"Features"`
+					} `json:"Layer"`
+				}{
+					Layer: struct {
+						Features []VulnerabilityInfo `json:"Features"`
+					}{
+						Features: vul,
+					},
+				},
 			}
+
+			// Filtere nur Features mit Vulnerabilities
+			var filteredFeatures []VulnerabilityInfo
+			for _, feature := range vul {
+				if len(feature.Vulnerabilities) > 0 || len(feature.BaseScores) > 0 || len(feature.CVEIds) > 0 {
+					filteredFeatures = append(filteredFeatures, feature)
+				}
+			}
+
+			vulStruct.Data.Layer.Features = filteredFeatures
+			result.Tags[i].Vulnerabilities = vulStruct
 		}
 		result.Tags[i].Repo = repo
 	}
