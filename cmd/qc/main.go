@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"qc/docs"
 	"qc/pkg/auth"
@@ -69,6 +71,40 @@ func main() {
 	}
 
 	if cfg.Organisation != "" {
+		if *repo != "" {
+			tags, err := ops.ListRepositoryTags(cfg.Organisation, *repo)
+			if err != nil {
+				fmt.Printf("Failed to list tags: %v\n", err)
+				os.Exit(1)
+			}
+
+			for _, tag := range tags.Tags {
+				expired := "No"
+				if tag.Expired {
+					expired = "Yes"
+				}
+				size := float64(tag.Size) / (1024 * 1024)
+				lastModified, err := time.Parse(time.RFC1123, tag.LastModified)
+				if err != nil {
+					fmt.Printf("Failed to parse LastModified: %v\n", err)
+					os.Exit(1)
+				}
+				fmt.Printf("Repo: %s  Tag: %s  Digest: %s  LastModified: %s Size: %10.3fMb  Expired: %s  ", tag.Repo, tag.Name, tag.Digest, lastModified.Format("02.01.2006-15:04:05"), size, expired)
+				fmt.Printf("VulnerabilityStatus: %v\n", tag.Vulnerabilities)
+
+				for featureName, feature := range tag.Vulnerabilities.Data.Layer.Features {
+					fmt.Printf("Feature: %s Version: %s\n", featureName, feature.Version)
+					for _, vuln := range feature.Vulnerabilities {
+						fmt.Printf("  - %s (%s): %s\n", vuln.Name, vuln.Severity, vuln.Description)
+						if vuln.FixVersion != "" {
+							fmt.Printf("    Fixed in version: %s\n", vuln.FixVersion)
+						}
+					}
+				}
+				// fmt.Println()
+			}
+			return
+		}
 		if *regex != "" {
 			repos, err := ops.ListRepositoriesByRegex(cfg.Organisation, *regex)
 			if err != nil {
@@ -95,7 +131,11 @@ func main() {
 	// Default: list all organizations
 	orgs, err := ops.ListOrganizations()
 	if err != nil {
-		fmt.Printf("Failed to list organizations: %v\n", err)
+		if strings.Contains(err.Error(), "404") {
+			fmt.Printf("Failed to list organizations: endpoint not found (404)\n")
+		} else {
+			fmt.Printf("Failed to list organizations: %v\n", err)
+		}
 		os.Exit(1)
 	}
 	for _, org := range orgs {
