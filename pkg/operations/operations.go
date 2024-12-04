@@ -8,6 +8,10 @@ import (
 	"net/http"
 	"qc/pkg/client"
 	"regexp"
+	"strings"
+	"time"
+
+	"gopkg.in/yaml.v2"
 )
 
 type Operations struct {
@@ -163,7 +167,7 @@ func (o *Operations) DeleteTag(org, repo, tag string) error {
 	return nil
 }
 
-func (o *Operations) ListRepositoryTags(org, repo string) (TagResults, error) {
+func (o *Operations) ListRepositoryTags(org, repo string, details bool) (TagResults, error) {
 	url := fmt.Sprintf("/repository/%s/%s/tag", org, repo)
 	resp, err := o.client.Get(url)
 	if err != nil {
@@ -184,53 +188,83 @@ func (o *Operations) ListRepositoryTags(org, repo string) (TagResults, error) {
 		return TagResults{}, fmt.Errorf("failed to decode response: %v", err)
 	}
 	for i := range result.Tags {
-		vul, status, err := o.getVulnerabilities(org, repo, result.Tags[i].Digest)
+		vul, status, err := o.getVulnerabilities(org, repo, result.Tags[i].Digest, details)
 		if err == nil && status == "scanned" {
 			// Erstelle eine neue Vulnerabilities-Struktur
-			vulStruct := Vulnerabilities{
-				Status: status,
-				Data: struct {
-					Layer struct {
-						Features []VulnerabilityInfo `json:"Features"`
-					} `json:"Layer"`
-				}{
-					Layer: struct {
-						Features []VulnerabilityInfo `json:"Features"`
-					}{
-						Features: vul,
-					},
-				},
-			}
 
 			// Filtere nur Features mit Vulnerabilities
 			var filteredFeatures []VulnerabilityInfo
-			for _, feature := range vul {
-				if len(feature.Vulnerabilities) > 0 || len(feature.BaseScores) > 0 || len(feature.CVEIds) > 0 {
-					filteredFeatures = append(filteredFeatures, feature)
+			vulStruct := Vulnerabilities{}
+			if details {
+				for _, feature := range vul {
+					if len(feature.Vulnerabilities) > 0 || len(feature.BaseScores) > 0 || len(feature.CVEIds) > 0 {
+						filteredFeatures = append(filteredFeatures, feature)
+					}
 				}
+				vulStruct.Data.Layer.Features = filteredFeatures
 			}
-
-			vulStruct.Data.Layer.Features = filteredFeatures
+			vulStruct.Status = status
 			result.Tags[i].Vulnerabilities = vulStruct
+			result.Tags[i].Repo = repo
 		}
-		result.Tags[i].Repo = repo
 	}
 
 	return result, nil
 }
 
-func CollectVulnerabilities(data Vulnerabilities) []VulnerabilityInfo {
+func (o *Operations) PrintRepositoriyTags(tags TagResults) {
+	for _, tag := range tags.Tags {
+		expired := "No"
+		if tag.Expired {
+			expired = "Yes"
+		}
+		size := float64(tag.Size) / (1024 * 1024)
+		lastModified, err := time.Parse(time.RFC1123, tag.LastModified)
+		if err != nil {
+			fmt.Printf("Failed to parse LastModified: %v\n", err)
+			// os.Exit(1)
+		} else {
+			lastModified = lastModified.Local()
+		}
+		fmt.Printf("Repo: %s  Tag: %s  Digest: %s  LastModified: %s Size: %10.3fMb  Expired: %s  ", tag.Repo, tag.Name, tag.Digest, lastModified.Format("02.01.2006-15:04:05"), size, expired)
+		fmt.Printf("VulnerabilityStatus: %v\n", tag.Vulnerabilities)
+
+		for _, feature := range tag.Vulnerabilities.Data.Layer.Features {
+			fmt.Printf("Feature: %s Version: %s\n", string(feature.Name), feature.Version)
+			for _, vuln := range feature.Vulnerabilities {
+				// fmt.Printf("  - %s (%s): %s\n", vuln.Name, vuln.Severity, vuln.Description)
+				// if vuln.FixVersion != "" {
+				// 	fmt.Printf("    Fixed in version: %s\n", vuln.FixVersion)
+				// }
+				v, err := yaml.Marshal(vuln)
+				if err == nil {
+					lines := strings.Split(string(v), "\n")
+					for _, line := range lines {
+						fmt.Printf("         %-120.120s\n", line)
+					}
+				}
+			}
+		}
+		// fmt.Println()
+	}
+}
+
+func CollectVulnerabilities(data Vulnerabilities, details bool) []VulnerabilityInfo {
 	var vulns []VulnerabilityInfo
 
 	for _, feature := range data.Data.Layer.Features {
 		// Check if any of the vulnerability-related fields are non-empty
 		if len(feature.BaseScores) > 0 || len(feature.CVEIds) > 0 || len(feature.Vulnerabilities) > 0 {
 			vuln := VulnerabilityInfo{
-				Name:            feature.Name,
-				Version:         feature.Version,
-				BaseScores:      feature.BaseScores,
-				CVEIds:          feature.CVEIds,
-				Vulnerabilities: feature.Vulnerabilities,
+				Name:       feature.Name,
+				Version:    feature.Version,
+				BaseScores: feature.BaseScores,
+				CVEIds:     feature.CVEIds,
+			}
+			if details {
+				vuln.Vulnerabilities = feature.Vulnerabilities
+			} else {
+				vuln.Vulnerabilities = []featureVulnerabilities{}
 			}
 			vulns = append(vulns, vuln)
 		}
@@ -240,7 +274,7 @@ func CollectVulnerabilities(data Vulnerabilities) []VulnerabilityInfo {
 }
 
 // Usage example in the getVulnerabilities function:
-func (o *Operations) getVulnerabilities(org, repo, digest string) ([]VulnerabilityInfo, string, error) {
+func (o *Operations) getVulnerabilities(org string, repo string, digest string, details bool) ([]VulnerabilityInfo, string, error) {
 	url := fmt.Sprintf("/repository/%s/%s/manifest/%s/security", org, repo, digest)
 	resp, err := o.client.Get(url)
 	if err != nil {
@@ -261,7 +295,6 @@ func (o *Operations) getVulnerabilities(org, repo, digest string) ([]Vulnerabili
 	}
 
 	// You can call CollectVulnerabilities here if needed
-	vulnerabilities := CollectVulnerabilities(result)
-
+	vulnerabilities := CollectVulnerabilities(result, details)
 	return vulnerabilities, result.Status, nil
 }

@@ -1,18 +1,20 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"qc/docs"
 	"qc/pkg/auth"
 	"qc/pkg/client"
 	"qc/pkg/config"
 	"qc/pkg/operations"
+
+	"gopkg.in/yaml.v2"
 )
 
 func main() {
@@ -26,7 +28,8 @@ func main() {
 	delete := flag.Bool("delete", false, "Delete specified tag")
 	regex := flag.String("regex", "", "Regex pattern to filter repositories")
 	quayURL := flag.String("registry", "", "Quay registry URL (default: $QUAYREGISTRY or https://quay.io)")
-
+	outputFormat := flag.String("output", "yaml", "Output format: text, json, or yaml, default is yaml")
+	details := flag.Bool("details", false, "Show detailed information")
 	flag.Parse()
 
 	if *showMan {
@@ -72,36 +75,33 @@ func main() {
 
 	if cfg.Organisation != "" {
 		if *repo != "" {
-			tags, err := ops.ListRepositoryTags(cfg.Organisation, *repo)
+			tags, err := ops.ListRepositoryTags(cfg.Organisation, *repo, *details)
 			if err != nil {
 				fmt.Printf("Failed to list tags: %v\n", err)
 				os.Exit(1)
 			}
-
-			for _, tag := range tags.Tags {
-				expired := "No"
-				if tag.Expired {
-					expired = "Yes"
-				}
-				size := float64(tag.Size) / (1024 * 1024)
-				lastModified, err := time.Parse(time.RFC1123, tag.LastModified)
+			if len(tags.Tags) == 0 {
+				fmt.Printf("No tags found for %s/%s\n", cfg.Organisation, *repo)
+				return
+			}
+			switch *outputFormat {
+			case "json":
+				data, err := json.MarshalIndent(tags, "", "  ")
 				if err != nil {
-					fmt.Printf("Failed to parse LastModified: %v\n", err)
-					os.Exit(1)
+					fmt.Printf("Failed to marshal JSON: %v\n", err)
+				} else {
+					fmt.Println(string(data))
 				}
-				fmt.Printf("Repo: %s  Tag: %s  Digest: %s  LastModified: %s Size: %10.3fMb  Expired: %s  ", tag.Repo, tag.Name, tag.Digest, lastModified.Format("02.01.2006-15:04:05"), size, expired)
-				fmt.Printf("VulnerabilityStatus: %v\n", tag.Vulnerabilities)
+			case "text":
+				ops.PrintRepositoriyTags(tags)
 
-				for featureName, feature := range tag.Vulnerabilities.Data.Layer.Features {
-					fmt.Printf("Feature: %s Version: %s\n", featureName, feature.Version)
-					for _, vuln := range feature.Vulnerabilities {
-						fmt.Printf("  - %s (%s): %s\n", vuln.Name, vuln.Severity, vuln.Description)
-						if vuln.FixVersion != "" {
-							fmt.Printf("    Fixed in version: %s\n", vuln.FixVersion)
-						}
-					}
+			default:
+				data, err := yaml.Marshal(tags)
+				if err != nil {
+					fmt.Printf("Failed to marshal YAML: %v\n", err)
+				} else {
+					fmt.Println(string(data))
 				}
-				// fmt.Println()
 			}
 			return
 		}
