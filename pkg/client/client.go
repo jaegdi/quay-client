@@ -4,7 +4,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
-	"qc/pkg/auth"
+
+	"github.com/jaegdi/quay-client/pkg/auth"
 )
 
 type Client struct {
