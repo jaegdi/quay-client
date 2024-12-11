@@ -382,6 +382,16 @@ func (o *Operations) PrintRepositoriyTags(tags TagResults) {
 	}
 }
 
+func (o *Operations) PrintUsers(users Prototypes) {
+	line := "-----------------------------"
+	format := "%-15.15s  %-25.25s %-10.10s %-15.15s %-25.25s\n"
+	fmt.Printf(format, "Kind", "Name", "Role", "AvatarKind", "AvatarName")
+	fmt.Printf(format, line, line, line, line, line)
+	for _, user := range users.Prototypes {
+		fmt.Printf(format, user.Delegate.Kind, user.Delegate.Name, user.Role, user.Delegate.Avatar.Kind, user.Delegate.Avatar.Name)
+	}
+}
+
 // CollectVulnerabilities collects and returns a list of VulnerabilityInfo from the given vulnerabilities.
 func CollectVulnerabilities(data Vulnerabilities) []VulnerabilityInfo {
 	var vulns []VulnerabilityInfo

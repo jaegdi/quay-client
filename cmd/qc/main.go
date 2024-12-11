@@ -123,11 +123,43 @@ func main() {
 				fmt.Printf("Failed to get users: %v\n", err)
 				os.Exit(1)
 			}
-			for _, user := range users.Prototypes {
-				fmt.Println(user)
-			}
+			// for _, user := range users.Prototypes {
+			// 	fmt.Println(user)
+			// }
 			switch *outputFormat {
 			case "json":
+				if *prettyprint {
+					formatter := prettyjson.NewFormatter()
+					data, err := formatter.Marshal(users)
+					if err != nil {
+						fmt.Printf("Failed to prettyprint JSON: %v\n", err)
+						fmt.Println(users)
+					} else {
+						printWithJQ(data)
+					}
+				} else {
+					data, err := json.Marshal(users)
+					if err != nil {
+						fmt.Printf("Failed to marshal JSON: %v\n", err)
+						fmt.Println(users)
+					} else {
+						fmt.Println(string(data))
+					}
+				}
+			case "text":
+				ops.PrintUsers(users)
+			default:
+				data, err := yaml.Marshal(users)
+				if err != nil {
+					fmt.Printf("Failed to marshal YAML: %v\n", err)
+					fmt.Println(users)
+				} else {
+					if *prettyprint {
+						printWithYQ(data)
+					} else {
+						fmt.Println(string(data))
+					}
+				}
 			}
 			return
 		} else {
