@@ -1,10 +1,11 @@
 package main
 
 import (
-	"encoding/json"
+	"bytes"
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -14,7 +15,8 @@ import (
 	"qc/pkg/config"
 	"qc/pkg/operations"
 
-	"gopkg.in/yaml.v2"
+	"github.com/ghodss/yaml"
+	"github.com/hokaccha/go-prettyjson"
 )
 
 func main() {
@@ -33,6 +35,8 @@ func main() {
 	curlReq := flag.Bool("curlreq", false, "Output a curl commandline with the Bearer token to query the Quay registry")
 	severity := flag.String("severity", "", "Filter vulnerabilities by severity")
 	baseScore := flag.Float64("basescore", 0, "Filter vulnerabilities by base score")
+	kubeconfigPath := flag.String("kubeconfig", "", "Path to the kubeconfig file")
+	prettyprint := flag.Bool("prettyprint", false, "Enable prettyprint")
 
 	// Short flags
 	flag.BoolVar(showMan, "m", false, "Show manual page")
@@ -49,6 +53,8 @@ func main() {
 	flag.BoolVar(curlReq, "c", false, "Output a curl commandline with the Bearer token to query the Quay registry")
 	flag.StringVar(severity, "sev", "", "Filter vulnerabilities by severity")
 	flag.Float64Var(baseScore, "b", 0, "Filter vulnerabilities by base score")
+	flag.StringVar(kubeconfigPath, "kc", "", "Path to the kubeconfig file")
+	flag.BoolVar(prettyprint, "pp", false, "Enable prettyprint")
 
 	flag.Usage = docs.ShowHelpPage
 	flag.Parse()
@@ -59,9 +65,12 @@ func main() {
 	}
 
 	// Get KUBECONFIG path
-	kubeconfig := os.Getenv("KUBECONFIG")
+	kubeconfig := *kubeconfigPath
 	if kubeconfig == "" {
-		kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		kubeconfig = os.Getenv("KUBECONFIG")
+		if kubeconfig == "" {
+			kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		}
 	}
 
 	// Initialize configuration
@@ -106,7 +115,7 @@ func main() {
 
 	if cfg.Organisation != "" {
 		if *repo != "" {
-			tags, err := ops.ListRepositoryTags(cfg.Organisation, *repo, *details)
+			tags, err := ops.ListRepositoryTags(cfg.Organisation, *repo, *details, *severity, *baseScore)
 			if err != nil {
 				fmt.Printf("Failed to list tags: %v\n", err)
 				os.Exit(1)
@@ -115,16 +124,18 @@ func main() {
 				fmt.Printf("No tags found for %s/%s\n", cfg.Organisation, *repo)
 				return
 			}
-			if *severity != "" || *baseScore > 0 {
-				tags = ops.FilterTagsBySeverityAndBaseScore(tags, *severity, *baseScore)
-			}
 			switch *outputFormat {
 			case "json":
-				data, err := json.MarshalIndent(tags, "", "  ")
+				formatter := prettyjson.NewFormatter()
+				data, err := formatter.Marshal(tags)
 				if err != nil {
 					fmt.Printf("Failed to marshal JSON: %v\n", err)
 				} else {
-					fmt.Println(string(data))
+					if *prettyprint {
+						printWithJQ(data)
+					} else {
+						fmt.Println(string(data))
+					}
 				}
 			case "text":
 				ops.PrintRepositoriyTags(tags)
@@ -134,7 +145,11 @@ func main() {
 				if err != nil {
 					fmt.Printf("Failed to marshal YAML: %v\n", err)
 				} else {
-					fmt.Println(string(data))
+					if *prettyprint {
+						printWithYQ(data)
+					} else {
+						fmt.Println(string(data))
+					}
 				}
 			}
 			return
@@ -174,5 +189,29 @@ func main() {
 	}
 	for _, org := range orgs {
 		fmt.Println(org)
+	}
+}
+
+func printWithJQ(data []byte) {
+	cmd := exec.Command("jq", ".")
+	cmd.Stdin = bytes.NewReader(data)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("Failed to run jq: %v\n", err)
+		fmt.Println(string(data))
+	}
+}
+
+func printWithYQ(data []byte) {
+	cmd := exec.Command("yq", "eval", "-P", "-")
+	cmd.Stdin = bytes.NewReader(data)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("Failed to run yq: %v\n", err)
+		fmt.Println(string(data))
 	}
 }

@@ -78,6 +78,12 @@ OPTIONS
     -curlreq, -c
         Output a curl commandline with the Bearer token to query the Quay registry
 
+    -kubeconfig, -kc
+        Path to the kubeconfig file (default is $KUBECONFIG or ~/.kube/config)
+
+    -prettyprint, -pp
+        Enable prettyprint of yaml and json output
+
 EXAMPLES
     List all organizations:
         qc

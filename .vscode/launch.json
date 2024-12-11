@@ -12,7 +12,10 @@
             "program": "${workspaceFolder}/cmd/qc/main.go",
             "args": [
                 "-organisation", "scp-baseimages",
-                "-repository", "grafana",
+                "-repository", "golang",
+                "-t", "1.22.7",
+                "-sev", "high",
+                "-kc", "/home/jaegdi/.kube/config-bash-883571"
             ]
         }
     ]

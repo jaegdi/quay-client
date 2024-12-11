@@ -52,16 +52,27 @@ type TagDetails struct {
 	Expired         bool            `json:"expired"`
 	Manifest        string          `json:"manifest"`
 	Vulnerabilities Vulnerabilities `json:"vulnerabilities"`
+	HighestScore    float64         `json:"highest_score"`
+	HighestSeverity string          `json:"highest_severity"`
+}
+
+var severityLevels = map[string]int{
+	"low":      1,
+	"medium":   2,
+	"high":     3,
+	"critical": 4,
 }
 
 type TagResults struct {
 	Tags []TagDetails `json:"tags"`
 }
 
+// NewOperations erstellt eine neue Instanz von Operations mit dem angegebenen Client.
 func NewOperations(client *client.Client) *Operations {
 	return &Operations{client: client}
 }
 
+// ListOrganizations returns a list of organizations that the user can see.
 func (o *Operations) ListOrganizations() ([]string, error) {
 	// resp, err := o.client.Get("/organization/")
 	//  /api/v1/superuser/organizations/
@@ -96,6 +107,7 @@ func (o *Operations) ListOrganizations() ([]string, error) {
 	return orgs, nil
 }
 
+// ListOrganizationRepositories returns a list of repositories for the specified organization.
 func (o *Operations) ListOrganizationRepositories(org string) ([]string, error) {
 	// url := fmt.Sprintf("/repository?public=true&namespace=%s&starred=false", org)
 	url := fmt.Sprintf("/repository?namespace=%s", org)
@@ -131,6 +143,7 @@ func (o *Operations) ListOrganizationRepositories(org string) ([]string, error) 
 	return repos, nil
 }
 
+// ListRepositoriesByRegex returns a filtered list of repositories that match the specified regex pattern.
 func (o *Operations) ListRepositoriesByRegex(org, pattern string) ([]string, error) {
 	repos, err := o.ListOrganizationRepositories(org)
 	if err != nil {
@@ -152,6 +165,7 @@ func (o *Operations) ListRepositoriesByRegex(org, pattern string) ([]string, err
 	return filtered, nil
 }
 
+// DeleteTag deletes the specified tag from the organization's repository.
 func (o *Operations) DeleteTag(org, repo, tag string) error {
 	path := fmt.Sprintf("/repository/%s/%s/tag/%s", org, repo, tag)
 	resp, err := o.client.Delete(path)
@@ -167,7 +181,8 @@ func (o *Operations) DeleteTag(org, repo, tag string) error {
 	return nil
 }
 
-func (o *Operations) ListRepositoryTags(org, repo string, details bool) (TagResults, error) {
+// ListRepositoryTags returns a list of tags for the specified repository, optionally with details.
+func (o *Operations) ListRepositoryTags(org, repo string, details bool, severity string, baseScore float64) (TagResults, error) {
 	url := fmt.Sprintf("/repository/%s/%s/tag", org, repo)
 	resp, err := o.client.Get(url)
 	if err != nil {
@@ -182,39 +197,64 @@ func (o *Operations) ListRepositoryTags(org, repo string, details bool) (TagResu
 	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	result := TagResults{}
+	filteredTags := TagResults{}
 
 	if err := json.NewDecoder(bytes.NewBuffer(bodyBytes)).Decode(&result); err != nil {
-		// fmt.Printf("Response body: %s\n", string(bodyBytes))
 		return TagResults{}, fmt.Errorf("failed to decode response: %v", err)
 	}
 	for i := range result.Tags {
-		vul, status, err := o.getVulnerabilities(org, repo, result.Tags[i].Digest, details)
+		vul, status, err := o.getVulnerabilities(org, repo, result.Tags[i].Digest)
 		if err == nil && status == "scanned" {
-			// Erstelle eine neue Vulnerabilities-Struktur
-
-			// Filtere nur Features mit Vulnerabilities
 			var filteredFeatures []VulnerabilityInfo
 			vulStruct := Vulnerabilities{}
-			if details {
-				for _, feature := range vul {
-					if len(feature.Vulnerabilities) > 0 || len(feature.BaseScores) > 0 || len(feature.CVEIds) > 0 {
-						filteredFeatures = append(filteredFeatures, feature)
-					}
+			for _, feature := range vul {
+				if len(feature.Vulnerabilities) > 0 || len(feature.BaseScores) > 0 || len(feature.CVEIds) > 0 {
+					filteredFeatures = append(filteredFeatures, feature)
 				}
-				vulStruct.Data.Layer.Features = filteredFeatures
 			}
+			vulStruct.Data.Layer.Features = filteredFeatures
+			highestScore, highestSeverity := getHighestScoreAndSeverity(filteredFeatures)
+			result.Tags[i].HighestScore = highestScore
+			result.Tags[i].HighestSeverity = highestSeverity
 			vulStruct.Status = status
-			result.Tags[i].Vulnerabilities = vulStruct
+			if details {
+				result.Tags[i].Vulnerabilities = vulStruct
+			}
 			result.Tags[i].Repo = repo
-
-			// Ändere die Größe in MB mit zwei Dezimalstellen
 			result.Tags[i].Size = float64(int(result.Tags[i].Size/(1024*1024)*100)) / 100
+			if severity != "" || baseScore > 0 {
+				o.FilterTagsBySeverityAndBaseScore(result.Tags[i], vulStruct, severity, baseScore, &filteredTags)
+			} else {
+				filteredTags.Tags = append(filteredTags.Tags, result.Tags[i])
+			}
 		}
 	}
 
-	return result, nil
+	return filteredTags, nil
 }
 
+// getHighestScoreAndSeverity returns the highest base score and severity level from a list of VulnerabilityInfo.
+func getHighestScoreAndSeverity(features []VulnerabilityInfo) (float64, string) {
+	var highestScore float64
+	var highestSeverity string
+
+	for _, feature := range features {
+		for _, score := range feature.BaseScores {
+			if score > highestScore {
+				highestScore = score
+			}
+		}
+		for _, vuln := range feature.Vulnerabilities {
+			severity := strings.ToLower(vuln.Severity)
+			if severityLevels[severity] > severityLevels[strings.ToLower(highestSeverity)] {
+				highestSeverity = vuln.Severity
+			}
+		}
+	}
+	return highestScore, highestSeverity
+}
+
+// PrintRepositoriyTags prints the tags of a repository to the console.
 func (o *Operations) PrintRepositoriyTags(tags TagResults) {
 	for _, tag := range tags.Tags {
 		expired := "No"
@@ -255,7 +295,8 @@ func (o *Operations) PrintRepositoriyTags(tags TagResults) {
 	}
 }
 
-func CollectVulnerabilities(data Vulnerabilities, details bool) []VulnerabilityInfo {
+// CollectVulnerabilities collects and returns a list of VulnerabilityInfo from the given vulnerabilities.
+func CollectVulnerabilities(data Vulnerabilities) []VulnerabilityInfo {
 	var vulns []VulnerabilityInfo
 
 	for _, feature := range data.Data.Layer.Features {
@@ -267,19 +308,15 @@ func CollectVulnerabilities(data Vulnerabilities, details bool) []VulnerabilityI
 				BaseScores: feature.BaseScores,
 				CVEIds:     feature.CVEIds,
 			}
-			if details {
-				vuln.Vulnerabilities = feature.Vulnerabilities
-			} else {
-				vuln.Vulnerabilities = []featureVulnerabilities{}
-			}
+			vuln.Vulnerabilities = feature.Vulnerabilities
 			vulns = append(vulns, vuln)
 		}
 	}
 	return vulns
 }
 
-// Usage example in the getVulnerabilities function:
-func (o *Operations) getVulnerabilities(org string, repo string, digest string, details bool) ([]VulnerabilityInfo, string, error) {
+// getVulnerabilities returns a list of VulnerabilityInfo, status and an error for the specified digest.
+func (o *Operations) getVulnerabilities(org string, repo string, digest string) ([]VulnerabilityInfo, string, error) {
 	url := fmt.Sprintf("/repository/%s/%s/manifest/%s/security", org, repo, digest)
 	resp, err := o.client.Get(url)
 	if err != nil {
@@ -300,58 +337,35 @@ func (o *Operations) getVulnerabilities(org string, repo string, digest string, 
 	}
 
 	// You can call CollectVulnerabilities here if needed
-	vulnerabilities := CollectVulnerabilities(result, details)
+	vulnerabilities := CollectVulnerabilities(result)
 	return vulnerabilities, result.Status, nil
 }
 
-func (o *Operations) FilterTagsBySeverity(tags TagResults, severity string) TagResults {
-	filteredTags := TagResults{}
-	for _, tag := range tags.Tags {
-		filteredFeatures := []VulnerabilityInfo{}
-		for _, feature := range tag.Vulnerabilities.Data.Layer.Features {
-			filteredVulns := []featureVulnerabilities{}
-			for _, vuln := range feature.Vulnerabilities {
-				if strings.EqualFold(vuln.Severity, severity) {
-					filteredVulns = append(filteredVulns, vuln)
-				}
-			}
-			if len(filteredVulns) > 0 {
-				feature.Vulnerabilities = filteredVulns
-				filteredFeatures = append(filteredFeatures, feature)
+// FilterTagsBySeverityAndBaseScore filters the tags according to the specified severity and base score.
+func (o *Operations) FilterTagsBySeverityAndBaseScore(tag TagDetails, vulnerabilities Vulnerabilities, severity string, baseScore float64, filteredTags *TagResults) {
+	// filteredTags := TagResults{}
+	filteredFeatures := []VulnerabilityInfo{}
+	for _, feature := range vulnerabilities.Data.Layer.Features {
+		filteredVulns := []featureVulnerabilities{}
+		for _, vuln := range feature.Vulnerabilities {
+			if (severity == "" || severityLevels[strings.ToLower(vuln.Severity)] >= severityLevels[strings.ToLower(severity)]) &&
+				(baseScore == 0 || anyBaseScoreAbove(feature.BaseScores, baseScore)) {
+				filteredVulns = append(filteredVulns, vuln)
 			}
 		}
-		if len(filteredFeatures) > 0 {
-			tag.Vulnerabilities.Data.Layer.Features = filteredFeatures
-			filteredTags.Tags = append(filteredTags.Tags, tag)
+		if len(filteredVulns) > 0 {
+			feature.Vulnerabilities = filteredVulns
+			filteredFeatures = append(filteredFeatures, feature)
 		}
 	}
-	return filteredTags
-}
-
-func (o *Operations) FilterTagsBySeverityAndBaseScore(tags TagResults, severity string, baseScore float64) TagResults {
-	filteredTags := TagResults{}
-	for _, tag := range tags.Tags {
-		filteredFeatures := []VulnerabilityInfo{}
-		for _, feature := range tag.Vulnerabilities.Data.Layer.Features {
-			filteredVulns := []featureVulnerabilities{}
-			for _, vuln := range feature.Vulnerabilities {
-				if (severity == "" || strings.EqualFold(vuln.Severity, severity)) && (baseScore == 0 || anyBaseScoreAbove(feature.BaseScores, baseScore)) {
-					filteredVulns = append(filteredVulns, vuln)
-				}
-			}
-			if len(filteredVulns) > 0 {
-				feature.Vulnerabilities = filteredVulns
-				filteredFeatures = append(filteredFeatures, feature)
-			}
-		}
-		if len(filteredFeatures) > 0 {
-			tag.Vulnerabilities.Data.Layer.Features = filteredFeatures
-			filteredTags.Tags = append(filteredTags.Tags, tag)
-		}
+	if len(filteredFeatures) > 0 {
+		// tag.Vulnerabilities.Data.Layer.Features = filteredFeatures
+		filteredTags.Tags = append(filteredTags.Tags, tag)
 	}
-	return filteredTags
+	// return filteredTags
 }
 
+// anyBaseScoreAbove checks whether any of the base scores are above the specified threshold.
 func anyBaseScoreAbove(baseScores []float64, threshold float64) bool {
 	for _, score := range baseScores {
 		if score > threshold {
