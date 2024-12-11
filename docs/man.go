@@ -63,8 +63,11 @@ OPTIONS
     -tag, -t string
         Tag name for delete operations
 
-    -delete, -d
-        Delete specified tag when used with -organisation, -repository, and -tag
+    -severity, -sev string
+        Filter vulnerabilities by severity (low, medium, high, critical)
+
+    -basescore, -b float64
+        Filter vulnerabilities by base score
 
     -regex, -x string
         Regex pattern to filter repositories
@@ -74,6 +77,9 @@ OPTIONS
 
     -details, -i
         Show detailed information
+
+    -delete, -d
+        Delete specified tag when used with -organisation, -repository, and -tag
 
     -curlreq, -c
         Output a curl commandline with the Bearer token to query the Quay registry
