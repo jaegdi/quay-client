@@ -41,21 +41,70 @@ ENVIRONMENT
         Default organization to use (used if -organisation parameter is not provided)
 
 OPTIONS
-    -man
+    -man, -m
         Show this manual page
 
-    -registry string
+    -registry, -u string
         Quay registry URL (default: from $QUAYREGISTRY or config)
 
-    -secret string
+    -secret, -s string
         Secret name containing Quay credentials (default: from config)
 
-    -namespace string
+    -namespace, -n string
         Namespace containing the secret (default: from config)
 
-    -organisation string
+    -organisation, -o string
         Organisation name (default: from $QUAYORG or config)
+        List all repositories, if no -repository flag is provided
 
-    ... [rest of the manual remains the same] ...
-`)
+    -repository, -r string
+        Repository name for tag operations
+
+    -tag, -t string
+        Tag name for delete operations
+
+    -delete, -d
+        Delete specified tag when used with -organisation, -repository, and -tag
+
+    -regex, -x string
+        Regex pattern to filter repositories
+
+    -output, -f string
+        Output format: text, json, or yaml (default: yaml)
+
+    -details, -i
+        Show detailed information
+
+    -curlreq, -c
+        Output a curl commandline with the Bearer token to query the Quay registry
+
+    -kubeconfig, -kc
+        Path to the kubeconfig file (default is $KUBECONFIG or ~/.kube/config)
+
+    -prettyprint, -pp
+        Enable prettyprint of yaml and json output
+
+EXAMPLES
+    List all organizations:
+        qc
+
+    List repositories in an organization:
+        qc -organisation myorg
+
+    List filtered repositories:
+        qc -organisation myorg -regex "^app-.*"
+
+    Delete a tag:
+        qc -delete -organisation myorg -repository myrepo -tag v1.0.0
+
+    Output a curl commandline:
+        qc -curlreq
+
+AUTHENTICATION
+    The tool supports authentication using either:
+    1. Docker config secrets (type: kubernetes.io/dockerconfigjson)
+    2. Opaque secrets containing either:
+       - token
+       - username and password`)
+	fmt.Println()
 }
