@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"qc/pkg/client"
 	"regexp"
 	"strings"
 	"time"
@@ -129,7 +128,7 @@ func (o *Operations) ListOrganizations() ([]string, error) {
 
 // ListOrganizationRepositories returns a list of repositories for the specified organization.
 func (o *Operations) ListOrganizationRepositories(org string) ([]string, error) {
-	// url := fmt.Sprintf("/repository?public=true&namespace=%s&starred=false", org)
+	// url := fmt.Sprintf("/repository?public=true&namespace=%s", org)
 	url := fmt.Sprintf("/repository?namespace=%s", org)
 	fmt.Printf("ListOrganizationRepositories url: %v\n", url)
 	resp, err := o.client.Get(url)
