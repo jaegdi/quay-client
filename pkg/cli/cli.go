@@ -3,7 +3,7 @@ package cli
 import (
 	"flag"
 
-	"github.com/jaegdi/quay-client/docs"
+	"github.com/jaegdi/quay-client/pkg/docs"
 )
 
 type Flags struct {
