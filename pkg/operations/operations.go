@@ -48,7 +48,7 @@ type TagDetails struct {
 	Name            string          `json:"name"`
 	Digest          string          `json:"manifest_digest"`
 	LastModified    string          `json:"last_modified"`
-	Size            int64           `json:"size"`
+	Size            float64         `json:"size"`
 	Expired         bool            `json:"expired"`
 	Manifest        string          `json:"manifest"`
 	Vulnerabilities Vulnerabilities `json:"vulnerabilities"`
@@ -171,7 +171,7 @@ func (o *Operations) ListRepositoryTags(org, repo string, details bool) (TagResu
 	url := fmt.Sprintf("/repository/%s/%s/tag", org, repo)
 	resp, err := o.client.Get(url)
 	if err != nil {
-		return TagResults{}, err
+		return TagResults{}, fmt.Errorf("failed to GET response: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -206,6 +206,9 @@ func (o *Operations) ListRepositoryTags(org, repo string, details bool) (TagResu
 			vulStruct.Status = status
 			result.Tags[i].Vulnerabilities = vulStruct
 			result.Tags[i].Repo = repo
+
+			// Ändere die Größe in MB mit zwei Dezimalstellen
+			result.Tags[i].Size = float64(int(result.Tags[i].Size/(1024*1024)*100)) / 100
 		}
 	}
 
@@ -219,6 +222,7 @@ func (o *Operations) PrintRepositoriyTags(tags TagResults) {
 			expired = "Yes"
 		}
 		size := float64(tag.Size) / (1024 * 1024)
+		size = tag.Size
 		lastModified, err := time.Parse(time.RFC1123, tag.LastModified)
 		if err != nil {
 			fmt.Printf("Failed to parse LastModified: %v\n", err)
@@ -226,11 +230,12 @@ func (o *Operations) PrintRepositoriyTags(tags TagResults) {
 		} else {
 			lastModified = lastModified.Local()
 		}
-		fmt.Printf("Repo: %s  Tag: %s  Digest: %s  LastModified: %s Size: %10.3fMb  Expired: %s  ", tag.Repo, tag.Name, tag.Digest, lastModified.Format("02.01.2006-15:04:05"), size, expired)
-		fmt.Printf("VulnerabilityStatus: %v\n", tag.Vulnerabilities)
-
+		fmt.Printf("Repo: %s  Tag: %s  Digest: %s  LastModified: %s Size: %10.2fMb  Expired: %s\n", tag.Repo, tag.Name, tag.Digest, lastModified.Format("02.01.2006-15:04:05"), size, expired)
+		// fmt.Printf("    VulnerabilityStatus: %v\n", tag.Vulnerabilities)
+		fmt.Printf("    Status: %v\n", tag.Vulnerabilities.Status)
+		// for _, vul := range tag.Vulnerabilities {
 		for _, feature := range tag.Vulnerabilities.Data.Layer.Features {
-			fmt.Printf("Feature: %s Version: %s\n", string(feature.Name), feature.Version)
+			fmt.Printf("        Feature: %s Version: %s  BaseScore: %3.1f\n", string(feature.Name), feature.Version, feature.BaseScores)
 			for _, vuln := range feature.Vulnerabilities {
 				// fmt.Printf("  - %s (%s): %s\n", vuln.Name, vuln.Severity, vuln.Description)
 				// if vuln.FixVersion != "" {
@@ -240,11 +245,12 @@ func (o *Operations) PrintRepositoriyTags(tags TagResults) {
 				if err == nil {
 					lines := strings.Split(string(v), "\n")
 					for _, line := range lines {
-						fmt.Printf("         %-120.120s\n", line)
+						fmt.Printf("            %s\n", line)
 					}
 				}
 			}
 		}
+		// }
 		// fmt.Println()
 	}
 }
@@ -269,7 +275,6 @@ func CollectVulnerabilities(data Vulnerabilities, details bool) []VulnerabilityI
 			vulns = append(vulns, vuln)
 		}
 	}
-
 	return vulns
 }
 
@@ -297,4 +302,61 @@ func (o *Operations) getVulnerabilities(org string, repo string, digest string, 
 	// You can call CollectVulnerabilities here if needed
 	vulnerabilities := CollectVulnerabilities(result, details)
 	return vulnerabilities, result.Status, nil
+}
+
+func (o *Operations) FilterTagsBySeverity(tags TagResults, severity string) TagResults {
+	filteredTags := TagResults{}
+	for _, tag := range tags.Tags {
+		filteredFeatures := []VulnerabilityInfo{}
+		for _, feature := range tag.Vulnerabilities.Data.Layer.Features {
+			filteredVulns := []featureVulnerabilities{}
+			for _, vuln := range feature.Vulnerabilities {
+				if strings.EqualFold(vuln.Severity, severity) {
+					filteredVulns = append(filteredVulns, vuln)
+				}
+			}
+			if len(filteredVulns) > 0 {
+				feature.Vulnerabilities = filteredVulns
+				filteredFeatures = append(filteredFeatures, feature)
+			}
+		}
+		if len(filteredFeatures) > 0 {
+			tag.Vulnerabilities.Data.Layer.Features = filteredFeatures
+			filteredTags.Tags = append(filteredTags.Tags, tag)
+		}
+	}
+	return filteredTags
+}
+
+func (o *Operations) FilterTagsBySeverityAndBaseScore(tags TagResults, severity string, baseScore float64) TagResults {
+	filteredTags := TagResults{}
+	for _, tag := range tags.Tags {
+		filteredFeatures := []VulnerabilityInfo{}
+		for _, feature := range tag.Vulnerabilities.Data.Layer.Features {
+			filteredVulns := []featureVulnerabilities{}
+			for _, vuln := range feature.Vulnerabilities {
+				if (severity == "" || strings.EqualFold(vuln.Severity, severity)) && (baseScore == 0 || anyBaseScoreAbove(feature.BaseScores, baseScore)) {
+					filteredVulns = append(filteredVulns, vuln)
+				}
+			}
+			if len(filteredVulns) > 0 {
+				feature.Vulnerabilities = filteredVulns
+				filteredFeatures = append(filteredFeatures, feature)
+			}
+		}
+		if len(filteredFeatures) > 0 {
+			tag.Vulnerabilities.Data.Layer.Features = filteredFeatures
+			filteredTags.Tags = append(filteredTags.Tags, tag)
+		}
+	}
+	return filteredTags
+}
+
+func anyBaseScoreAbove(baseScores []float64, threshold float64) bool {
+	for _, score := range baseScores {
+		if score > threshold {
+			return true
+		}
+	}
+	return false
 }

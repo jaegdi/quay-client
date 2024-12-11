@@ -30,6 +30,27 @@ func main() {
 	quayURL := flag.String("registry", "", "Quay registry URL (default: $QUAYREGISTRY or https://quay.io)")
 	outputFormat := flag.String("output", "yaml", "Output format: text, json, or yaml, default is yaml")
 	details := flag.Bool("details", false, "Show detailed information")
+	curlReq := flag.Bool("curlreq", false, "Output a curl commandline with the Bearer token to query the Quay registry")
+	severity := flag.String("severity", "", "Filter vulnerabilities by severity")
+	baseScore := flag.Float64("basescore", 0, "Filter vulnerabilities by base score")
+
+	// Short flags
+	flag.BoolVar(showMan, "m", false, "Show manual page")
+	flag.StringVar(secretName, "s", "", "Secret name containing Quay credentials")
+	flag.StringVar(namespace, "n", "", "Namespace containing the secret")
+	flag.StringVar(org, "o", "", "Organisation name")
+	flag.StringVar(repo, "r", "", "Repository name")
+	flag.StringVar(tag, "t", "", "Tag name")
+	flag.BoolVar(delete, "d", false, "Delete specified tag")
+	flag.StringVar(regex, "x", "", "Regex pattern to filter repositories")
+	flag.StringVar(quayURL, "u", "", "Quay registry URL (default: $QUAYREGISTRY or https://quay.io)")
+	flag.StringVar(outputFormat, "f", "yaml", "Output format: text, json, or yaml, default is yaml")
+	flag.BoolVar(details, "i", false, "Show detailed information")
+	flag.BoolVar(curlReq, "c", false, "Output a curl commandline with the Bearer token to query the Quay registry")
+	flag.StringVar(severity, "sev", "", "Filter vulnerabilities by severity")
+	flag.Float64Var(baseScore, "b", 0, "Filter vulnerabilities by base score")
+
+	flag.Usage = docs.ShowHelpPage
 	flag.Parse()
 
 	if *showMan {
@@ -55,6 +76,16 @@ func main() {
 	if err != nil {
 		fmt.Printf("Authentication failed: %v\n", err)
 		os.Exit(1)
+	}
+
+	// Output curl commandline if -curlreq flag is set
+	if *curlReq {
+		if auth.Token != "" {
+			fmt.Printf("curl -H \"Authorization: Bearer %s\" %s\n", auth.Token, cfg.QuayURL)
+		} else {
+			fmt.Printf("No Bearer token found in the provided secret.\n")
+		}
+		return
 	}
 
 	// Initialize client
@@ -83,6 +114,9 @@ func main() {
 			if len(tags.Tags) == 0 {
 				fmt.Printf("No tags found for %s/%s\n", cfg.Organisation, *repo)
 				return
+			}
+			if *severity != "" || *baseScore > 0 {
+				tags = ops.FilterTagsBySeverityAndBaseScore(tags, *severity, *baseScore)
 			}
 			switch *outputFormat {
 			case "json":

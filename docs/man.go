@@ -41,36 +41,42 @@ ENVIRONMENT
         Default organization to use (used if -organisation parameter is not provided)
 
 OPTIONS
-    -man
+    -man, -m
         Show this manual page
 
-    -registry string
+    -registry, -u string
         Quay registry URL (default: from $QUAYREGISTRY or config)
 
-    -secret string
+    -secret, -s string
         Secret name containing Quay credentials (default: from config)
 
-    -namespace string
+    -namespace, -n string
         Namespace containing the secret (default: from config)
 
-    -organisation string
+    -organisation, -o string
         Organisation name (default: from $QUAYORG or config)
+        List all repositories, if no -repository flag is provided
 
-
-        -organisation string
-        Organisation name to list repositories from
-
-    -repository string
+    -repository, -r string
         Repository name for tag operations
 
-    -tag string
+    -tag, -t string
         Tag name for delete operations
 
-    -delete
+    -delete, -d
         Delete specified tag when used with -organisation, -repository, and -tag
 
-    -regex string
+    -regex, -x string
         Regex pattern to filter repositories
+
+    -output, -f string
+        Output format: text, json, or yaml (default: yaml)
+
+    -details, -i
+        Show detailed information
+
+    -curlreq, -c
+        Output a curl commandline with the Bearer token to query the Quay registry
 
 EXAMPLES
     List all organizations:
@@ -84,6 +90,9 @@ EXAMPLES
 
     Delete a tag:
         qc -delete -organisation myorg -repository myrepo -tag v1.0.0
+
+    Output a curl commandline:
+        qc -curlreq
 
 AUTHENTICATION
     The tool supports authentication using either:

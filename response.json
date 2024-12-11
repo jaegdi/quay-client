@@ -1,0 +1,680 @@
+{
+    "repositories": [
+        {
+            "namespace": "pkp",
+            "name": "test",
+            "description": "",
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 0,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "bonitaetscheck",
+            "description": "",
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 0,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "bonitaetscheck-service",
+            "description": "",
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 3870331168,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "bonitaetscheck-quay",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 331462936,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "bonitaetsauskunft-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 6229301131,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "bestellverwaltung-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 4989369212,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "customerident-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 3724234227,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "db2",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 1902581982,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "apache-mod-auth-openidc",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 794269788,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "wvv-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 6540445075,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "schufaauskunftonline-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 8533598382,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "sapasyncadapter-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 2662285990,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "shopasyncadapter-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 2056132853,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "verbrauchersupport-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 6330641385,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "vertragsverwaltung-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 6458096372,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "beratungdirekt-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 2668996552,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "dksasyncadapter-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 2416069262,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "wiremock",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 4487362974,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "fibu-adapter-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 1685305550,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "identsafe-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 3025467508,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "identsafe-async-adapter-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 1827587010,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "bi-service-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 3343401458,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "keycloak-async-adapter-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 2700739601,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "keycloak-provisioning-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 866063092,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "partnerkarte-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 1698790778,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "meineschufainformiert-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 2507802545,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "formularservice-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 2293205661,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "plasticard-connector-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 1820334465,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "retrieval-component-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 2301468497,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "priorityservice-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 1786121017,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "postkorb-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 2123055374,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "crm-pk-async-adapter-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 1752187397,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "schufa-updateservice-adapter-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 1336475387,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "webcode-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 1527026561,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "testdaten-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 1253575165,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "zahlungsstoerungenjob-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 2219312985,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "dlqcontrol-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 1780190233,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "ebf-adapter-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 2377019049,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "updateservice-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 2728078989,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "unternehmensauskunft-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 2368817523,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "unternehmenssuche-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 1112174071,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "postgres",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 201419234,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "pk-keycloak-extension-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 20395723567,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "test-postgres",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 209831209,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "produkt-leistungsumfang-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 528024916,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "postgres-vpdv",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 321280376,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "kafkaui-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 337773352,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "test-runner-image",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 662518382,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "portalcompositor",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 293858390,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "skipper",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 115971615,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "payment-async-adapter-service",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 1679794112,
+                "configured_quota": 161061273600
+            }
+        },
+        {
+            "namespace": "pkp",
+            "name": "loopback",
+            "description": null,
+            "is_public": false,
+            "kind": "image",
+            "state": "NORMAL",
+            "is_starred": false,
+            "quota_report": {
+                "quota_bytes": 283604248,
+                "configured_quota": 161061273600
+            }
+        }
+    ]
+}
