@@ -8,10 +8,8 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/jaegdi/quay-client/pkg/client"
-	"gopkg.in/yaml.v2"
 )
 
 type Operations struct {
@@ -220,7 +218,6 @@ func (o *Operations) GetUsers(org string) (Prototypes, error) {
 }
 
 // ListRepositoryTags retrieves the tags of a specified repository within an organization, optionally with details.
-// ListRepositoryTags returns a list of tags for a specific repository.
 // This function takes the name of the repository as an input parameter and returns a list of tags,
 // associated with this repository. Tags are specific markings or labels that refer to certain
 // Commits can be applied in the repository to mark important points in the project's history,
@@ -347,51 +344,6 @@ func getHighestScoreAndSeverity(features []VulnerabilityInfo) (float64, string) 
 	return highestScore, highestSeverity
 }
 
-// PrintRepositoriyTags prints the tags of a repository to the console.
-func (o *Operations) PrintRepositoriyTags(tags TagResults) {
-	for _, tag := range tags.Tags {
-		expired := "No"
-		if tag.Expired {
-			expired = "Yes"
-		}
-		size := float64(tag.Size) / (1024 * 1024)
-		size = tag.Size
-		lastModified, err := time.Parse(time.RFC1123, tag.LastModified)
-		if err != nil {
-			fmt.Printf("Failed to parse LastModified: %v\n", err)
-		} else {
-			lastModified = lastModified.Local()
-		}
-		fmt.Printf("Repo: %-30.30s  Tag: %-20.20s  Digest: %s  LastModified: %s Size: %10.2fMb  Expired: %s  Status: %-9.9s  Score: %5.2f  Severity: %-10.10s\n",
-			tag.Repo, tag.Name, tag.Digest, lastModified.Format("02.01.2006-15:04:05"), size,
-			expired, tag.Vulnerabilities.Status, tag.HighestScore, tag.HighestSeverity)
-		if tag.Vulnerabilities.Data != nil {
-			for _, feature := range tag.Vulnerabilities.Data.Layer.Features {
-				fmt.Printf("        Feature: %s Version: %s  BaseScore: %3.1f\n", string(feature.Name), feature.Version, feature.BaseScores)
-				for _, vuln := range feature.Vulnerabilities {
-					v, err := yaml.Marshal(vuln)
-					if err == nil {
-						lines := strings.Split(string(v), "\n")
-						for _, line := range lines {
-							fmt.Printf("            %s\n", line)
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
-func (o *Operations) PrintUsers(users Prototypes) {
-	line := "-----------------------------"
-	format := "%-15.15s  %-25.25s %-10.10s %-15.15s %-25.25s\n"
-	fmt.Printf(format, "Kind", "Name", "Role", "AvatarKind", "AvatarName")
-	fmt.Printf(format, line, line, line, line, line)
-	for _, user := range users.Prototypes {
-		fmt.Printf(format, user.Delegate.Kind, user.Delegate.Name, user.Role, user.Delegate.Avatar.Kind, user.Delegate.Avatar.Name)
-	}
-}
-
 // CollectVulnerabilities collects and returns a list of VulnerabilityInfo from the given vulnerabilities.
 func CollectVulnerabilities(data Vulnerabilities) []VulnerabilityInfo {
 	var vulns []VulnerabilityInfo
@@ -414,7 +366,19 @@ func CollectVulnerabilities(data Vulnerabilities) []VulnerabilityInfo {
 	return vulns
 }
 
-// getVulnerabilities returns a list of VulnerabilityInfo, status and an error for the specified digest.
+// getVulnerabilities retrieves the list of vulnerabilities for a given repository digest.
+//
+// Parameters:
+//
+//	org: The organization name.
+//	repo: The repository name.
+//	digest: The digest of the repository manifest.
+//
+// Returns:
+//
+//	A slice of VulnerabilityInfo containing the vulnerabilities found.
+//	A string representing the status of the vulnerability scan.
+//	An error if the request fails or the response cannot be processed.
 func (o *Operations) getVulnerabilities(org string, repo string, digest string) ([]VulnerabilityInfo, string, error) {
 	url := fmt.Sprintf("/repository/%s/%s/manifest/%s/security", org, repo, digest)
 	resp, err := o.client.Get(url)
@@ -439,7 +403,18 @@ func (o *Operations) getVulnerabilities(org string, repo string, digest string) 
 	return vulnerabilities, result.Status, nil
 }
 
-// FilterTagsBySeverityAndBaseScore filters the tags according to the specified severity and base score.
+// FilterTagsBySeverityAndBaseScore filters the vulnerabilities of a given tag based on severity and base score criteria.
+// It updates the filteredTags with tags that meet the criteria.
+//
+// Parameters:
+//   - tag: The tag details to be filtered.
+//   - vulnerabilities: The vulnerabilities associated with the tag.
+//   - severity: The minimum severity level to filter vulnerabilities. If empty, all severities are considered.
+//   - baseScore: The minimum base score to filter vulnerabilities. If zero, all base scores are considered.
+//   - filteredTags: The result set where tags that meet the criteria are appended.
+//
+// The function iterates through the features of the vulnerabilities and filters out those that do not meet the severity
+// and base score criteria. If any features remain after filtering, the tag is added to the filteredTags result set.
 func (o *Operations) FilterTagsBySeverityAndBaseScore(tag TagDetails, vulnerabilities Vulnerabilities, severity string, baseScore float64, filteredTags *TagResults) {
 	filteredFeatures := []VulnerabilityInfo{}
 	if vulnerabilities.Data != nil {
@@ -460,10 +435,17 @@ func (o *Operations) FilterTagsBySeverityAndBaseScore(tag TagDetails, vulnerabil
 	if len(filteredFeatures) > 0 {
 		filteredTags.Tags = append(filteredTags.Tags, tag)
 	}
-	// return filteredTags
 }
 
-// anyBaseScoreAbove checks whether any of the base scores are above the specified threshold.
+// anyBaseScoreAbove checks if any score in the baseScores slice is above the given threshold.
+// It returns true if at least one score is greater than the threshold, otherwise it returns false.
+//
+// Parameters:
+// - baseScores: A slice of float64 values representing the base scores to be checked.
+// - threshold: A float64 value representing the threshold to compare against.
+//
+// Returns:
+// - bool: true if any score in baseScores is greater than the threshold, false otherwise.
 func anyBaseScoreAbove(baseScores []float64, threshold float64) bool {
 	for _, score := range baseScores {
 		if score > threshold {

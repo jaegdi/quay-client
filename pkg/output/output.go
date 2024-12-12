@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/hokaccha/go-prettyjson"
@@ -41,9 +42,7 @@ func GetUserInformation(ops *operations.Operations, org, outputFormat string, pr
 		fmt.Printf("Failed to get users: %v\n", err)
 		os.Exit(1)
 	}
-	OutputData(users, outputFormat, prettyprint, func(data interface{}) {
-		ops.PrintUsers(data.(operations.Prototypes))
-	})
+	OutputData(users, outputFormat, prettyprint, PrintUsers)
 }
 
 func ListRepositoryTags(ops *operations.Operations, org, repo, severity string, baseScore float64, details bool, outputFormat string, prettyprint bool) {
@@ -56,9 +55,7 @@ func ListRepositoryTags(ops *operations.Operations, org, repo, severity string, 
 		fmt.Printf("No tags found for %s/%s\n", org, repo)
 		return
 	}
-	OutputData(tags, outputFormat, prettyprint, func(data interface{}) {
-		ops.PrintRepositoriyTags(data.(operations.TagResults))
-	})
+	OutputData(tags, outputFormat, prettyprint, PrintRepositoriyTags)
 }
 
 func ListRepositoriesByRegex(ops *operations.Operations, org, pattern string) {
@@ -161,5 +158,51 @@ func PrintWithYQ(data []byte) {
 	if err != nil {
 		fmt.Printf("Failed to run yq: %v\n", err)
 		fmt.Println(string(data))
+	}
+}
+
+func PrintRepositoriyTags(data interface{}) {
+	tags := data.(operations.TagResults)
+	for _, tag := range tags.Tags {
+		expired := "No"
+		if tag.Expired {
+			expired = "Yes"
+		}
+		size := float64(tag.Size) / (1024 * 1024)
+		size = tag.Size
+		lastModified, err := time.Parse(time.RFC1123, tag.LastModified)
+		if err != nil {
+			fmt.Printf("Failed to parse LastModified: %v\n", err)
+		} else {
+			lastModified = lastModified.Local()
+		}
+		fmt.Printf("Repo: %-30.30s  Tag: %-20.20s  Digest: %s  LastModified: %s Size: %10.2fMb  Expired: %s  Status: %-9.9s  Score: %5.2f  Severity: %-10.10s\n",
+			tag.Repo, tag.Name, tag.Digest, lastModified.Format("02.01.2006-15:04:05"), size,
+			expired, tag.Vulnerabilities.Status, tag.HighestScore, tag.HighestSeverity)
+		if tag.Vulnerabilities.Data != nil {
+			for _, feature := range tag.Vulnerabilities.Data.Layer.Features {
+				fmt.Printf("        Feature: %s Version: %s  BaseScore: %3.1f\n", string(feature.Name), feature.Version, feature.BaseScores)
+				for _, vuln := range feature.Vulnerabilities {
+					v, err := yaml.Marshal(vuln)
+					if err == nil {
+						lines := strings.Split(string(v), "\n")
+						for _, line := range lines {
+							fmt.Printf("            %s\n", line)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func PrintUsers(data interface{}) {
+	users := data.(operations.Prototypes)
+	line := "-----------------------------"
+	format := "%-15.15s  %-25.25s %-10.10s %-15.15s %-25.25s\n"
+	fmt.Printf(format, "Kind", "Name", "Role", "AvatarKind", "AvatarName")
+	fmt.Printf(format, line, line, line, line, line)
+	for _, user := range users.Prototypes {
+		fmt.Printf(format, user.Delegate.Kind, user.Delegate.Name, user.Role, user.Delegate.Avatar.Kind, user.Delegate.Avatar.Name)
 	}
 }
