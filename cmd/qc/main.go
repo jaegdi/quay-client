@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/jaegdi/quay-client/pkg/auth"
 	"github.com/jaegdi/quay-client/pkg/cli"
@@ -22,7 +21,7 @@ func main() {
 		return
 	}
 
-	kubeconfig := getKubeconfigPath(flags.KubeconfigPath)
+	kubeconfig := config.GetKubeconfigPath(flags.KubeconfigPath)
 	cfg, err := config.NewConfig(kubeconfig, flags.SecretName, flags.Namespace, flags.QuayURL, flags.Org)
 	if err != nil {
 		fmt.Printf("Failed to initialize config: %v\n", err)
@@ -67,14 +66,4 @@ func main() {
 	}
 
 	output.ListOrganizations(ops)
-}
-
-func getKubeconfigPath(kubeconfigPath string) string {
-	if kubeconfigPath != "" {
-		return kubeconfigPath
-	}
-	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
-		return kubeconfig
-	}
-	return filepath.Join(os.Getenv("HOME"), ".kube", "config")
 }

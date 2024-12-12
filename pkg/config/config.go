@@ -2,11 +2,10 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	// "k8s.io/client-go/rest"
-	// "k8s.io/client-go/tools/clientcmd"
 )
 
 type Config struct {
@@ -16,6 +15,16 @@ type Config struct {
 	K8sConfig    *rest.Config
 	QuayURL      string
 	Organisation string
+}
+
+func GetKubeconfigPath(kubeconfigPath string) string {
+	if kubeconfigPath != "" {
+		return kubeconfigPath
+	}
+	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
+		return kubeconfig
+	}
+	return filepath.Join(os.Getenv("HOME"), ".kube", "config")
 }
 
 // NewConfig creates a new Config instance
