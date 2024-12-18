@@ -8,6 +8,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// Config represents the configuration of the Quay client
 type Config struct {
 	KubeConfig   string
 	SecretName   string
@@ -17,6 +18,13 @@ type Config struct {
 	Organisation string
 }
 
+// GetKubeconfigPath returns the path to the kubeconfig file
+// The function checks the following locations (in order):
+// 1. Command line argument
+// 2. Environment variable KUBECONFIG
+// 3. Default location: $HOME/.kube/config
+// The function returns the first valid path found.
+// If no path is found, the function returns an empty string.
 func GetKubeconfigPath(kubeconfigPath string) string {
 	if kubeconfigPath != "" {
 		return kubeconfigPath
@@ -28,6 +36,12 @@ func GetKubeconfigPath(kubeconfigPath string) string {
 }
 
 // NewConfig creates a new Config instance
+// The function initializes the configuration using the following priority order:
+// 1. Command line arguments
+// 2. Environment variables
+// 3. Configuration file (yaml)
+// 4. Hardcoded defaults
+// The function returns a Config instance and an error if the configuration fails.
 func NewConfig(kubeconfig, secretName, namespace, quayURL, organisation string) (*Config, error) {
 	// Load YAML config first
 	yamlConfig, err := LoadYamlConfig()
@@ -61,6 +75,9 @@ func NewConfig(kubeconfig, secretName, namespace, quayURL, organisation string) 
 		if organisation == "" {
 			organisation = yamlConfig.Registry.Organisation
 		}
+	}
+	if organisation == "-" {
+		organisation = ""
 	}
 
 	// Load kubernetes configuration

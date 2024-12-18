@@ -22,6 +22,7 @@ type Auth struct {
 	Token    string
 }
 
+// dockerConfigJSON represents the structure of a Docker config JSON
 type dockerConfigJSON struct {
 	Auths map[string]struct {
 		Auth string `json:"auth"`
@@ -29,6 +30,19 @@ type dockerConfigJSON struct {
 }
 
 // NewAuth creates a new Auth instance using OpenShift secret
+// The function returns an Auth instance and an error if the authentication fails
+// The function retrieves the secret from the specified namespace and extracts the credentials
+// The function returns an error if the secret type is not supported
+// The function returns an error if the secret does not contain valid credentials
+//
+// Parameters:
+//
+//	cfg: a pointer to the Config instance
+//
+// Returns:
+//
+//	a pointer to the Auth instance
+//	an error if the authentication fails
 func NewAuth(cfg *config.Config) (*Auth, error) {
 	clientset, err := kubernetes.NewForConfig(cfg.K8sConfig)
 	if err != nil {
@@ -54,6 +68,18 @@ func NewAuth(cfg *config.Config) (*Auth, error) {
 	}
 }
 
+// setAuthHeader sets the Authorization header based on the client's authentication method
+// The function sets the Authorization header based on the client's authentication method
+// The function sets the Authorization header to the token if the token is provided
+// The function sets the Authorization header to the base64 encoded username and password if both are provided
+//
+// Parameters:
+//
+//	req: The http.Request instance to set the Authorization header on
+//
+// Returns:
+// a pointer to the Auth instance
+// An error if the authentication fails
 func parseDockerConfig(secret *corev1.Secret) (*Auth, error) {
 	configJSON := secret.Data[".dockerconfigjson"]
 	var config dockerConfigJSON
@@ -76,6 +102,18 @@ func parseDockerConfig(secret *corev1.Secret) (*Auth, error) {
 	return nil, fmt.Errorf("no valid Quay.io credentials found in docker config")
 }
 
+// parseOpaqueSecret extracts the credentials from an opaque secret
+// The function returns an Auth instance and an error if the secret does not contain valid credentials
+// The function returns an error if the secret does not contain valid credentials
+//
+// Parameters:
+//
+//	secret: a pointer to the Secret instance
+//
+// Returns:
+//
+//	a pointer to the Auth instance
+//	an error if the secret does not contain valid credentials
 func parseOpaqueSecret(secret *corev1.Secret) (*Auth, error) {
 	if token, exists := secret.Data["token"]; exists {
 		return &Auth{Token: string(token)}, nil

@@ -11,11 +11,12 @@
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/qc/main.go",
             "args": [
-                "-organisation", "scp-baseimages",
-                "-repository", "golang",
-                "-t", "1.22.7",
+                "-organisation", "pkp",
+                "-repository", "apache-mod-auth-openidc",
+                "-t", "0.7.5-0",
                 "-sev", "high",
-                "-kc", "/home/jaegdi/.kube/config-bash-883571"
+                "-kc", "/home/jaegdi/.kube/config-bash-687332",
+                "-ft", "-i"
             ]
         }
     ]

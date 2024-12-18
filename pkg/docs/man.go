@@ -106,6 +106,18 @@ EXAMPLES
     Output a curl commandline:
         qc -curlreq
 
+    List all repos of an organization with vulnerabilities:
+        org=scp-baseimages
+        for rep in $(qc -o $org); do qc -o $org -r $rep -f text;done
+
+    List all repos of an organization with vulnerabilities of severity high and above:
+        org=scp-baseimages
+        for rep in $(qc -o $org); do qc -o $org -r $rep  -sev high -f text;done
+
+    List all repos of an organization with vulnerabilities of base score 9 and above:
+        org=scp-baseimages
+        for rep in $(qc -o $org); do qc -o $org -r $rep  -b 9 -f text;done
+
 AUTHENTICATION
     The tool supports authentication using either:
     1. Docker config secrets (type: kubernetes.io/dockerconfigjson)

@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// YamlConfig represents the structure of the YAML configuration file
 type YamlConfig struct {
 	Registry struct {
 		URL          string `yaml:"url"`
@@ -17,6 +18,13 @@ type YamlConfig struct {
 }
 
 // LoadYamlConfig loads configuration from config.yaml file
+//
+// The function searches for the config file in the following locations:
+// 1. ./config.yaml
+// 2. $HOME/.config/qc/config.yaml
+// 3. /etc/qc/config.yaml
+//
+// If no config file is found, the function returns default values.
 func LoadYamlConfig() (*YamlConfig, error) {
 	// Define possible config file locations
 	configLocations := []string{
