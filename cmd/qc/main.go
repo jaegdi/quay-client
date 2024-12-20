@@ -40,11 +40,21 @@ func main() {
 	}
 	// Get kubeconfig path and initialize config
 	kubeconfig := config.GetKubeconfigPath(flags.KubeconfigPath)
-	cfg, err := config.NewConfig(kubeconfig, flags.SecretName, flags.Namespace, flags.QuayURL, flags.Org)
-	if err != nil {
+	cfg, err := config.NewConfig(kubeconfig, flags.SecretName, flags.SecretNamespace, flags.QuayURL, flags.Org)
+	if err != nil && !flags.CreateConfig {
 		fmt.Printf("Failed to initialize config: %v\n", err)
 		os.Exit(1)
 	}
+
+	if flags.CreateConfig {
+		if err := config.SaveConfigToFile(cfg); err != nil {
+			fmt.Printf("Failed to save config: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Config file created successfully\n")
+		return
+	}
+
 	// Initialize authentication
 	auth, err := auth.NewAuth(cfg)
 	if err != nil {
@@ -91,11 +101,11 @@ func main() {
 		}
 		if flags.Regex != "" {
 			// List repositories by regex
-			output.ListRepositoriesByRegex(ops, cfg.Organisation, flags.Regex, flags.OutputFormat, flags.Prettyprint)
+			output.ListRepositoriesByRegex(ops, cfg.Organisation, flags.Regex, flags.OutputFormat, flags.Prettyprint, flags.Details)
 			return
 		}
 		// List organization repositories
-		output.ListOrganizationRepositories(ops, cfg.Organisation, flags.OutputFormat, flags.Prettyprint)
+		output.ListOrganizationRepositories(ops, cfg.Organisation, flags.OutputFormat, flags.Prettyprint, flags.Details)
 		return
 	}
 

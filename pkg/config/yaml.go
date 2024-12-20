@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -8,13 +9,16 @@ import (
 )
 
 // YamlConfig represents the structure of the YAML configuration file
+type Registry struct {
+	URL             string `yaml:"url"`
+	KubeconfigPath  string `yaml:"kubeconfig_path"`
+	SecretName      string `yaml:"secret_name"`
+	SecretNamespace string `yaml:"secret_namespace"`
+}
+
 type YamlConfig struct {
-	Registry struct {
-		URL          string `yaml:"url"`
-		SecretName   string `yaml:"secret_name"`
-		Namespace    string `yaml:"namespace"`
-		Organisation string `yaml:"organisation"`
-	} `yaml:"registry"`
+	Registry     Registry `yaml:"registry"`
+	Organisation string   `yaml:"organisation"`
 }
 
 // LoadYamlConfig loads configuration from config.yaml file
@@ -33,7 +37,7 @@ func LoadYamlConfig() (*YamlConfig, error) {
 		"/etc/qc/config.yaml",
 	}
 
-	var configFile string
+	configFile := ""
 	for _, loc := range configLocations {
 		if _, err := os.Stat(loc); err == nil {
 			configFile = loc
@@ -41,33 +45,31 @@ func LoadYamlConfig() (*YamlConfig, error) {
 		}
 	}
 
+	yamlConfig := YamlConfig{
+		Registry: Registry{
+			URL:             "https://quay.io",
+			KubeconfigPath:  "$KUBECONFIG",
+			SecretName:      "Name of secret for quay admin user",
+			SecretNamespace: "Namespace of secret for quay admin user",
+		},
+		Organisation: "optional set here the default organisation",
+	}
+
 	// If no config file found, return default values
 	if configFile == "" {
-		return &YamlConfig{
-			Registry: struct {
-				URL          string `yaml:"url"`
-				SecretName   string `yaml:"secret_name"`
-				Namespace    string `yaml:"namespace"`
-				Organisation string `yaml:"organisation"`
-			}{
-				URL:          "https://quay.io",
-				SecretName:   "quay-admin",
-				Namespace:    "scp-build",
-				Organisation: "",
-			},
-		}, nil
+		return &yamlConfig, nil
 	}
 
-	// Read and parse config file
-	data, err := os.ReadFile(configFile)
+	file, err := os.Open(configFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open config file: %v", err)
+	}
+	defer file.Close()
+	// Read and parse config file
+	decoder := yaml.NewDecoder(file)
+	if err := decoder.Decode(&yamlConfig); err != nil {
+		return nil, fmt.Errorf("failed to decode config file: %v", err)
 	}
 
-	config := &YamlConfig{}
-	if err := yaml.Unmarshal(data, config); err != nil {
-		return nil, err
-	}
-
-	return config, nil
+	return &yamlConfig, nil
 }

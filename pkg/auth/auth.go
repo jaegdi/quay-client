@@ -49,7 +49,7 @@ func NewAuth(cfg *config.Config) (*Auth, error) {
 		return nil, fmt.Errorf("failed to create kubernetes client: %v", err)
 	}
 
-	secret, err := clientset.CoreV1().Secrets(cfg.Namespace).Get(
+	secret, err := clientset.CoreV1().Secrets(cfg.SecretNamespace).Get(
 		context.Background(),
 		cfg.SecretName,
 		metav1.GetOptions{},

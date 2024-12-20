@@ -1,21 +1,24 @@
 package config
 
 import (
+	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
+	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 // Config represents the configuration of the Quay client
 type Config struct {
-	KubeConfig   string
-	SecretName   string
-	Namespace    string
-	K8sConfig    *rest.Config
-	QuayURL      string
-	Organisation string
+	KubeConfig      string
+	SecretName      string
+	SecretNamespace string
+	K8sConfig       *rest.Config
+	QuayURL         string
+	Organisation    string
 }
 
 // GetKubeconfigPath returns the path to the kubeconfig file
@@ -35,6 +38,52 @@ func GetKubeconfigPath(kubeconfigPath string) string {
 	return filepath.Join(os.Getenv("HOME"), ".kube", "config")
 }
 
+// SaveConfigToFile saves the configuration to a file in ~/.config/qc/config.yaml
+func SaveConfigToFile(config *Config) error {
+	configDir := filepath.Join(os.Getenv("HOME"), ".config", "qc")
+	if err := os.MkdirAll(configDir, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create config directory: %v", err)
+	}
+
+	configFilePath := filepath.Join(configDir, "config.yaml")
+	file, err := os.Create(configFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to create config file: %v", err)
+	}
+	defer file.Close()
+
+	encoder := yaml.NewEncoder(file)
+	defer encoder.Close()
+	yamlConfig := &YamlConfig{}
+	if config != nil {
+		yamlConfig = &YamlConfig{
+			Registry: Registry{
+				URL:             config.QuayURL,
+				KubeconfigPath:  config.KubeConfig,
+				SecretName:      config.SecretName,
+				SecretNamespace: config.SecretNamespace,
+			},
+			Organisation: config.Organisation,
+		}
+	} else {
+		yamlConfig = &YamlConfig{
+			Registry: Registry{
+				URL:             "https://quay.io",
+				KubeconfigPath:  "$KUBECONFIG",
+				SecretName:      "Name of secret for quay admin user",
+				SecretNamespace: "Namespace of secret for quay admin user",
+			},
+			Organisation: "optional set here the default organisation",
+		}
+	}
+
+	if err := encoder.Encode(yamlConfig); err != nil {
+		return fmt.Errorf("failed to encode config to file: %v", err)
+	}
+	log.Println("Config file created successfully in path:", configFilePath)
+	return nil
+}
+
 // NewConfig creates a new Config instance
 // The function initializes the configuration using the following priority order:
 // 1. Command line arguments
@@ -42,7 +91,7 @@ func GetKubeconfigPath(kubeconfigPath string) string {
 // 3. Configuration file (yaml)
 // 4. Hardcoded defaults
 // The function returns a Config instance and an error if the configuration fails.
-func NewConfig(kubeconfig, secretName, namespace, quayURL, organisation string) (*Config, error) {
+func NewConfig(kubeconfig, secretName, secretNamespace, quayURL, organisation string) (*Config, error) {
 	// Load YAML config first
 	yamlConfig, err := LoadYamlConfig()
 	if err != nil {
@@ -61,19 +110,25 @@ func NewConfig(kubeconfig, secretName, namespace, quayURL, organisation string) 
 
 	// Handle SecretName
 	if secretName == "" {
-		secretName = yamlConfig.Registry.SecretName
+		secretName = os.Getenv("QUAYREGISTRYADMINSECRET")
+		if secretName == "" {
+			secretName = yamlConfig.Registry.SecretName
+		}
 	}
 
-	// Handle Namespace
-	if namespace == "" {
-		namespace = yamlConfig.Registry.Namespace
+	// Handle secretNamespace
+	if secretNamespace == "" {
+		secretNamespace = os.Getenv("QUAYREGISTRYSECRETNAMESPACE")
+		if secretNamespace == "" {
+			secretNamespace = yamlConfig.Registry.SecretNamespace
+		}
 	}
 
 	// Handle Organisation
 	if organisation == "" {
-		organisation = os.Getenv("QUAYORG")
+		organisation = os.Getenv("QUAYDEFAULTORG")
 		if organisation == "" {
-			organisation = yamlConfig.Registry.Organisation
+			organisation = yamlConfig.Organisation
 		}
 	}
 	if organisation == "-" {
@@ -92,11 +147,11 @@ func NewConfig(kubeconfig, secretName, namespace, quayURL, organisation string) 
 	}
 
 	return &Config{
-		KubeConfig:   kubeconfig,
-		SecretName:   secretName,
-		Namespace:    namespace,
-		K8sConfig:    config,
-		QuayURL:      quayURL,
-		Organisation: organisation,
+		KubeConfig:      kubeconfig,
+		SecretName:      secretName,
+		SecretNamespace: secretNamespace,
+		K8sConfig:       config,
+		QuayURL:         quayURL,
+		Organisation:    organisation,
 	}, nil
 }

@@ -1,10 +1,6 @@
 # quay-client
 a cli client for quay
 
-These changes add support for specifying the Quay registry URL in two ways:
-1. Using the `-registry` command-line parameter
-2. Using the `QUAYREGISTRY` environment variable
-
 The configuration priority is now:
 1. Command-line arguments
 2. Environment variables
@@ -21,6 +17,7 @@ You can use the tool in several ways:
 export QUAYREGISTRY=https://custom.quay.io
 ./qc -organisation myorg
 
+# Create a config file:  qc -cc
 # Using config file (edit ~/.config/qc/config.yaml)
 ./qc -organisation myorg
 
@@ -34,7 +31,7 @@ You can specify the organization in multiple ways:
 
 1. Command line:
 ```bash
-./qc -organisation myorg
+./qc -organisation myorg   or   ./qc -o myorg
 ```
 
 2. Environment variable:
@@ -63,11 +60,26 @@ This provides a flexible way to specify the organization while maintaining backw
 
 1. Run the installation script to create the default config file:
 ```bash
-chmod +x install.sh
-./install.sh
+./qc -cc
 ```
 
 2. Edit the configuration file as needed:
 ```bash
 vim ~/.config/qc/config.yaml
+```
+
+# Build
+
+## Compile qc client
+
+```sh
+use the provides script build.sh
+
+./build.sh
+```
+
+## compile linux and windows verson and upload both to artifactory
+
+```sh
+./deploy-.to-.artifactory.sh
 ```

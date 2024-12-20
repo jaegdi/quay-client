@@ -2,117 +2,43 @@ package docs
 
 import (
 	"fmt"
+	"os"
 )
 
+// ShowHelpPage displays the help page for the quay-client command line tool.
+// The help page provides information about the available flags and their usage.
 func ShowHelpPage() {
-	fmt.Println(`
-NAME
-    qc - Quay Container Registry Client
+	fmt.Print(`Usage: qc [OPTIONS]
 
-SYNOPSIS
-    qc [OPTIONS]
+Options:
+  -m, --man                Show manual page
+  -s, --secret             Secret name containing Quay credentials
+  -sn, --secret-namespace  Namespace containing the secret
+  -o, --organisation       Organisation name
+  -r, --repository         Repository name
+  -t, --tag                Tag name or regexp for tagname
+  -d, --delete             Delete specified tag
+  -x, --regex              Regex pattern to filter repositories
+  -u, --registry           Quay registry URL (default: $QUAYREGISTRY or https://quay.io)
+  -f, --format             Output format: text, json, or yaml (default: yaml)
+  --ft                     Set Output format to text
+  --fj                     Set Output format to json
+  -i, --details            Show detailed information
+  -c, --curlreq            Output a curl commandline with the Bearer token to query the Quay registry
+  --sev                    Filter vulnerabilities by severity [low, medium, high, critical]
+  -b, --basescore          Filter vulnerabilities by base score
+  -kc, --kubeconfig        Path to the kubeconfig file
+  -pp, --prettyprint       Enable prettyprint
+  -gu, --getusers          Get user information
+  -v, --verify             Enable print verify infos
+  --create-config, -cc     Create a example config in $HOME/.config/qc/config.yaml
 
-DESCRIPTION
-    A command-line tool for managing Quay container registry repositories and tags.
-    Uses Kubernetes configuration and secrets for authentication.
-
-CONFIGURATION
-    The tool looks for configuration in the following locations (in order):
-    1. Command line arguments
-    2. Environment variables
-    3. Configuration file (yaml):
-       - ./config.yaml
-       - $HOME/.config/qc/config.yaml
-       - /etc/qc/config.yaml
-
-    Example config.yaml:
-        registry:
-          url: https://quay.io
-          secret_name: quay-admin
-          namespace: scp-build
-          organisation: myorg
-
-ENVIRONMENT
-    KUBECONFIG
-        Path to the Kubernetes configuration file (default: ~/.kube/config)
-
-    QUAYREGISTRY
-        URL of the Quay registry (used if -registry parameter is not provided)
-
-    QUAYORG
-        Default organization to use (used if -organisation parameter is not provided)
-
-OPTIONS
-    -man, -m
-        Show this manual page
-
-    -registry, -u string
-        Quay registry URL (default: from $QUAYREGISTRY or config)
-
-        -secret, -s string
-        Secret name containing Quay credentials (default: from config)
-
-    -namespace, -n string
-        Namespace containing the secret (default: from config)
-
-    -organisation, -o string
-        Organisation name (default: from $QUAYORG or config)
-        List all repositories, if no -repository flag is provided
-
-    -repository, -r string
-        Repository name for tag operations
-
-    -tag, -t string
-        Tag name for delete operations
-
-    -severity, -sev string
-        Filter vulnerabilities by severity (low, medium, high, critical)
-
-    -basescore, -b float64
-        Filter vulnerabilities by base score
-
-    -regex, -x string
-        Regex pattern to filter repositories
-
-    -output, -f string
-        Output format: text, json, or yaml (default: yaml)
-
-    -details, -i
-        Show detailed information
-
-    -delete, -d
-        Delete specified tag when used with -organisation, -repository, and -tag
-
-    -curlreq, -c
-        Output a curl commandline with the Bearer token to query the Quay registry
-
-    -kubeconfig, -kc
-        Path to the kubeconfig file (default is $KUBECONFIG or ~/.kube/config)
-
-    -prettyprint, -pp
-        Enable prettyprint of yaml and json output
-
-EXAMPLES
-    List all organizations:
-        qc
-
-    List repositories in an organization:
-        qc -organisation myorg
-
-    List filtered repositories:
-        qc -organisation myorg -regex "^app-.*"
-
-    Delete a tag:
-        qc -delete -organisation myorg -repository myrepo -tag v1.0.0
-
-    Output a curl commandline:
-        qc -curlreq
-
-AUTHENTICATION
-    The tool supports authentication using either:
-    1. Docker config secrets (type: kubernetes.io/dockerconfigjson)
-    2. Opaque secrets containing either:
-       - token
-       - username and password`)
-	fmt.Println()
+Examples:
+  qc -o my-org -r my-repo -t my-tag -d
+  qc -o my-org -r my-repo -x ".*test.*"
+  qc -o my-org -gu
+  qc -c
+  qc -m
+`)
+	os.Exit(0)
 }

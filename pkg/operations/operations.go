@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jaegdi/quay-client/pkg/cli"
 	"github.com/jaegdi/quay-client/pkg/client"
 )
 
@@ -187,16 +188,19 @@ func (o *Operations) ListOrganizations() (OrgSet, error) {
 // Returns:
 //   - OrgSet: A struct containing the list of repositories.
 //   - error: An error if the operation fails at any point.
-func (o *Operations) ListOrganizationRepositories(org string) (OrgSet, error) {
-	// url := fmt.Sprintf("/repository?public=true&namespace=%s", org)
+func (o *Operations) ListOrganizationRepositories(org string, details bool) (OrgSet, error) {
+	onlyYoungest := details
+	flags := cli.GetFlags()
 	url := fmt.Sprintf("/repository?namespace=%s", org)
-	// log.Printf("ListOrganizationRepositories url: %v\n", url)
+	if flags.Verify {
+		log.Printf("ListOrganizationRepositories url: %v   organisation: %s\n", url, org)
+	}
+	// query the repositories of org
 	resp, err := o.client.Get(url)
 	if err != nil {
 		return OrgSet{}, err
 	}
 	defer resp.Body.Close()
-
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return OrgSet{}, fmt.Errorf("failed to read response body: %v", err)
@@ -213,9 +217,47 @@ func (o *Operations) ListOrganizationRepositories(org string) (OrgSet, error) {
 	var orgs OrgSet
 	orgs.Organizations = append(orgs.Organizations, Organization{Name: org})
 
-	for i, _ := range orgs.Organizations {
+	for oi, _ := range orgs.Organizations {
 		for _, repo := range result.Repositories {
-			orgs.Organizations[i].Repositories = append(orgs.Organizations[i].Repositories, repo)
+			orgs.Organizations[oi].Repositories = append(orgs.Organizations[oi].Repositories, repo)
+		}
+		if details {
+			var wg sync.WaitGroup
+			repoChan := make(chan Repository, len(orgs.Organizations[oi].Repositories))
+
+			for ri := range orgs.Organizations[oi].Repositories {
+				wg.Add(1)
+				// time.Sleep(500 * time.Millisecond)
+
+				// repo := orgs.Organizations[oi].Repositories[i]
+				go func(repo Repository) {
+					defer wg.Done()
+					if flags.Verify {
+						log.Println("ListOrganizationRepositories with org: ", org, " repo: ", orgs.Organizations[oi].Repositories[ri].Name)
+					}
+					tags, err := o.ListRepositoryTags(org, repo.Name, "", "", 0, false, onlyYoungest)
+					if err != nil {
+						log.Printf("Failed to list tags for repository %s: %v", repo.Name, err)
+						return
+					}
+					repo.Tags = tags.Tags
+					if len(repo.Tags) == 0 {
+						return
+					}
+
+					repoChan <- repo
+				}(orgs.Organizations[oi].Repositories[ri])
+			}
+
+			wg.Wait()
+			close(repoChan)
+
+			var updatedRepos []Repository
+			for repo := range repoChan {
+				updatedRepos = append(updatedRepos, repo)
+			}
+
+			orgs.Organizations[oi].Repositories = updatedRepos
 		}
 	}
 	return orgs, nil
@@ -235,8 +277,8 @@ func (o *Operations) ListOrganizationRepositories(org string) (OrgSet, error) {
 // Returns:
 //   - OrgSet: A struct containing the filtered list of repositories.
 //   - error: An error if the operation fails at any point.
-func (o *Operations) ListRepositoriesByRegex(org, pattern string) (OrgSet, error) {
-	orgs, err := o.ListOrganizationRepositories(org)
+func (o *Operations) ListRepositoriesByRegex(org, pattern string, details bool) (OrgSet, error) {
+	orgs, err := o.ListOrganizationRepositories(org, details)
 	if err != nil {
 		return OrgSet{}, err
 	}
@@ -344,8 +386,12 @@ func (o *Operations) GetUsers(org string) (Prototypes, error) {
 //  7. Optionally includes detailed vulnerability information based on the 'details' parameter.
 //  8. Filters the tags based on the specified severity and base score.
 //  9. Returns the filtered tags and any error encountered.
-func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseScore float64, details bool) (TagResults, error) {
+func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseScore float64, details bool, onlyYoungest bool) (TagResults, error) {
 	//  1. Constructs the URL for the repository tags.
+	flags := cli.GetFlags()
+	if flags.Verify {
+		log.Println("ListRepositoryTags with org: ", org, " repo: ", repo, " tag: ", tag, " severity: ", severity, " baseScore: ", baseScore, " details: ", details)
+	}
 	url := fmt.Sprintf("/repository/%s/%s/tag", org, repo)
 	// 2. Sends a GET request to the URL.
 	resp, err := o.client.Get(url)
@@ -367,6 +413,20 @@ func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseSco
 		return TagResults{}, fmt.Errorf("failed to decode response: %v", err)
 	}
 
+	if onlyYoungest {
+		// Find the youngest tag
+		if len(result.Tags) == 0 {
+			return TagResults{}, nil
+		}
+		youngestTag := result.Tags[0]
+		for _, tag := range result.Tags {
+			if tag.Age < youngestTag.Age {
+				youngestTag = tag
+			}
+		}
+		result.Tags = []TagDetails{}
+		result.Tags = append(result.Tags, youngestTag)
+	}
 	var wg sync.WaitGroup
 	tagChan := make(chan TagDetails, len(result.Tags))
 
@@ -378,7 +438,7 @@ func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseSco
 				continue
 			}
 		}
-
+		// time.Sleep(100 * time.Millisecond)
 		wg.Add(1)
 		go func(tag TagDetails) {
 			defer wg.Done()

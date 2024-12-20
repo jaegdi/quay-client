@@ -1,5 +1,5 @@
 registry:
   url: https://registry-quay-quay.apps.pro-scp1.sf-rz.de
   secret_name: quay-admin
-  namespace: scp-build
-  organisation: scp 
+  secret_namespace: scp-build
+  organisation: scp

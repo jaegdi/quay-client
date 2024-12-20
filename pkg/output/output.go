@@ -89,7 +89,7 @@ func GetUserInformation(ops *operations.Operations, org, outputFormat string, pr
 // outputFormat: The output format: text, json, or yaml.
 // prettyprint: A boolean flag indicating whether to pretty-print the output.
 func ListRepositoryTags(ops *operations.Operations, org, repo, tag, severity string, baseScore float64, details bool, outputFormat string, prettyprint bool) {
-	tags, err := ops.ListRepositoryTags(org, repo, tag, severity, baseScore, details)
+	tags, err := ops.ListRepositoryTags(org, repo, tag, severity, baseScore, details, false)
 	if err != nil {
 		fmt.Printf("Failed to list tags: %v\n", err)
 		os.Exit(1)
@@ -113,8 +113,8 @@ func ListRepositoryTags(ops *operations.Operations, org, repo, tag, severity str
 // pattern: The regex pattern to filter the repositories.
 // outputFormat: The output format: text, json, or yaml.
 // prettyprint: A boolean flag indicating whether to pretty-print the output.
-func ListRepositoriesByRegex(ops *operations.Operations, org, pattern string, outputFormat string, prettyprint bool) {
-	repos, err := ops.ListRepositoriesByRegex(org, pattern)
+func ListRepositoriesByRegex(ops *operations.Operations, org, pattern, outputFormat string, prettyprint, details bool) {
+	repos, err := ops.ListRepositoriesByRegex(org, pattern, details)
 	if err != nil {
 		fmt.Printf("Failed to list repositories filtered by regex: %v\n", err)
 		os.Exit(1)
@@ -133,13 +133,24 @@ func ListRepositoriesByRegex(ops *operations.Operations, org, pattern string, ou
 // org: The organization name.
 // outputFormat: The output format: text, json, or yaml.
 // prettyprint: A boolean flag indicating whether to pretty-print the output.
-func ListOrganizationRepositories(ops *operations.Operations, org string, outputFormat string, prettyprint bool) {
-	repos, err := ops.ListOrganizationRepositories(org)
+func ListOrganizationRepositories(ops *operations.Operations, org string, outputFormat string, prettyprint bool, details bool) {
+	repos, err := ops.ListOrganizationRepositories(org, details)
 	if err != nil {
 		fmt.Printf("Failed to list repositories: %v\n", err)
 		os.Exit(1)
 	}
-	OutputData(repos, outputFormat, prettyprint, PrintList, "Repositories")
+	if details {
+		for _, org := range repos.Organizations {
+			tags := []operations.TagDetails{}
+			for _, repo := range org.Repositories {
+				tags = append(tags, repo.Tags...)
+			}
+			taglist := operations.TagResults{Tags: tags}
+			OutputData(taglist, outputFormat, prettyprint, PrintRepositoriyTags, "Overview - From every repo of org: "+org.Name+", the youngest tag of each repo.")
+		}
+	} else {
+		OutputData(repos, outputFormat, prettyprint, PrintList, "Repositories")
+	}
 }
 
 // ListOrganizations lists all organizations.
@@ -184,6 +195,7 @@ func OutputData(data interface{}, format string, prettyprint bool, printFunc fun
 		OutputJSON(data, prettyprint)
 	case "text":
 		printFunc(data, headline)
+		fmt.Println()
 	default:
 		OutputYAML(data, prettyprint)
 	}
@@ -287,7 +299,11 @@ func PrintWithYQ(data []byte) {
 // data: The tag results to be printed.
 // headline: A string that will be printed before the data.
 func PrintRepositoriyTags(data interface{}, headline string) {
-	tags := data.(operations.TagResults)
+	tags, ok := data.(operations.TagResults)
+	if !ok {
+		fmt.Printf("Unsupported data type for PrintRepositoriyTags: %T\n", data)
+		return
+	}
 
 	// define formating strings
 	line := "-----------------------------"
@@ -300,10 +316,16 @@ func PrintRepositoriyTags(data interface{}, headline string) {
 	fmt.Printf(fh, "Repo", "Tag", "Expired", "Status", "Score", "Severity", "Age [D]", "LastModified", "Size [Mb]", "Digest")
 	fmt.Printf(fh, line, line, line, line, line, line, line, line, line, strings.Repeat(line, 5))
 
-	// sort tags by age
-	sort.Slice(tags.Tags, func(i, j int) bool {
-		return tags.Tags[i].Age < tags.Tags[j].Age
-	})
+	if strings.Contains(headline, "Overview") {
+		sort.Slice(tags.Tags, func(i, j int) bool {
+			return tags.Tags[i].Repo < tags.Tags[j].Repo
+		})
+	} else {
+		// sort tags by age
+		sort.Slice(tags.Tags, func(i, j int) bool {
+			return tags.Tags[i].Age < tags.Tags[j].Age
+		})
+	}
 
 	// print data
 	for _, tag := range tags.Tags {
@@ -327,7 +349,7 @@ func PrintRepositoriyTags(data interface{}, headline string) {
 			tag.Age, lastModified.Format("02.01.2006-15:04:05"), size, tag.Digest)
 
 		// print vulnerabilities
-		if tag.Vulnerabilities.Data != nil {
+		if !strings.Contains(headline, "Overview") && tag.Vulnerabilities.Data != nil {
 			for _, feature := range tag.Vulnerabilities.Data.Layer.Features {
 				fmt.Printf("        Feature: %s Version: %s  BaseScore: %3.1f\n", string(feature.Name), feature.Version, feature.BaseScores)
 				for _, vuln := range feature.Vulnerabilities {
@@ -405,8 +427,9 @@ func PrintList(data interface{}, headline string) {
 		//  print Data
 		for _, org := range v.Organizations {
 			if len(org.Repositories) > 0 {
-				fmt.Printf(f, "Organisation", "Repository")
-				fmt.Printf(f, line, strings.Repeat(line, 4))
+				sort.Slice(org.Repositories, func(i, j int) bool {
+					return org.Repositories[i].Name < org.Repositories[j].Name
+				})
 				for _, repo := range org.Repositories {
 					fmt.Printf(f, org.Name, repo.Name)
 				}
