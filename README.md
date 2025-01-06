@@ -1,7 +1,45 @@
 # quay-client
+
 a cli client for quay
 
-The configuration priority is now:
+The Quay Client Command Line Tool (qc) allows you to interact with the Quay registry.
+You can perform various operations such as listing organizations, repositories, and tags,
+deleting tags, and retrieving user information.
+
+## Usage
+
+! If the credentials for quay registry schould be used from openshift secret, it is neccessary to be logged in into cid-cluster, where a secret is in the scp-build namespace !
+
+The default output format is yaml, option with param -ft it is text, or with -fj it is json.
+
+### List all organisations of the quay registry as text list
+```bash
+qc -tf
+```
+
+### List all repositories of a existing organisation as text list
+```bash
+qc -o pkp -ft
+```
+
+### List from each repository of an organisation the newest tag with its highest rated vulnerability
+```bash
+qc -o pkp -i -ft
+```
+
+### List a tag of a repository with all vulnerabilities as yaml
+```bash
+qc -o pkp -i -r beratungdirekt-service -t 2.13.3-0
+```
+
+## Installation
+
+Copy the qc binary (statically linked go binary) into a directory of your exeec path.
+
+
+## Configuration
+
+The configuration priority is:
 1. Command-line arguments
 2. Environment variables
 3. YAML configuration file
@@ -56,7 +94,7 @@ The priority remains:
 This provides a flexible way to specify the organization while maintaining backward compatibility with the existing implementation.
 
 
-## To use this new configuration system:
+### To use the configuration system:
 
 1. Run the installation script to create the default config file:
 ```bash
@@ -68,9 +106,9 @@ This provides a flexible way to specify the organization while maintaining backw
 vim ~/.config/qc/config.yaml
 ```
 
-# Build
+## Build
 
-## Compile qc client
+### Compile qc client
 
 ```sh
 use the provides script build.sh
@@ -78,8 +116,10 @@ use the provides script build.sh
 ./build.sh
 ```
 
-## compile linux and windows verson and upload both to artifactory
+### compile linux and windows verson and upload both to artifactory
+
+This is only working in our company
 
 ```sh
-./deploy-.to-.artifactory.sh
+./deploy-to-artifactory.sh
 ```
