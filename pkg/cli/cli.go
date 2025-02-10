@@ -29,6 +29,7 @@ type Flags struct {
 	GetUsers         bool
 	Verify           bool
 	CreateConfig     bool
+	GetNotifications bool
 }
 
 var flags Flags
@@ -94,6 +95,9 @@ func ParseFlags() *Flags {
 
 	flag.BoolVar(&flags.CreateConfig, "create-config", false, "Create a example config in $HOME/.config/qc/config.yaml")
 	flag.BoolVar(&flags.CreateConfig, "cc", false, "Create a example config in $HOME/.config/qc/config.yaml")
+
+	flag.BoolVar(&flags.GetNotifications, "gn", false, "Get notifications")
+	flag.BoolVar(&flags.GetNotifications, "getnotifications", false, "Get notifications")
 
 	// Short flags
 

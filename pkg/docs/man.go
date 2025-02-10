@@ -77,6 +77,9 @@ OPTIONS
     -gu, --getusers
         Get user information
 
+    -gn, --getnotifications
+        Get notifications
+
     -v, --verify
         Enable print verify infos
 
@@ -87,6 +90,7 @@ EXAMPLES
     qc -o my-org -r my-repo -t my-tag -d
     qc -o my-org -r my-repo -x ".*test.*"
     qc -o my-org -gu
+    qc -gn
     qc -c
     qc -m
 `)

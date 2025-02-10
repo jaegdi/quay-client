@@ -115,6 +115,14 @@ type Prototypes struct {
 	} `json:"prototypes"`
 }
 
+// Notification represents a notification in the Quay registry.
+type Notification struct {
+	ID          int    `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	CreatedAt   string `json:"created_at"`
+}
+
 // NewOperations erstellt eine neue Instanz von Operations mit dem angegebenen Client.
 // NewOperations creates a new instance of Operations with the specified client.
 //
@@ -660,4 +668,40 @@ func anyBaseScoreAbove(baseScores []float64, threshold float64) bool {
 		}
 	}
 	return false
+}
+
+// ListNotifications retrieves the list of notifications from all repositories of an organization in the Quay registry.
+func (o *Operations) ListNotifications(org string) ([]Notification, error) {
+	orgSet, err := o.ListOrganizationRepositories(org, false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list repositories: %v", err)
+	}
+
+	var allNotifications []Notification
+	for _, repository := range orgSet.Organizations[0].Repositories {
+		url := fmt.Sprintf("/repository/%s/%s/notification/", org, repository.Name)
+		resp, err := o.client.Get(url)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get notifications for repository %s: %v", repository.Name, err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("failed to list notifications: endpoint not found (404)")
+		}
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("failed to list notifications: %s", resp.Status)
+		}
+
+		var result struct {
+			Notifications []Notification `json:"notifications"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			return nil, fmt.Errorf("failed to decode response: %v", err)
+		}
+
+		allNotifications = append(allNotifications, result.Notifications...)
+	}
+
+	return allNotifications, nil
 }

@@ -26,6 +26,7 @@ import (
 // 7. Perform operations based on the flags provided:
 //   - If the Delete flag is set along with Organisation, Repo, and Tag, delete the specified tag.
 //   - If the GetUsers flag is set, get user information.
+//   - If the GetNotifications flag is set, list notifications.
 //   - If Organisation is specified:
 //   - If Repo is specified, list repository tags.
 //   - If Regex is specified, list repositories by regex.
@@ -90,6 +91,12 @@ func main() {
 			fmt.Printf("Organisation name is required to get users\n")
 			os.Exit(1)
 		}
+	}
+
+	// List notifications
+	if flags.GetNotifications {
+		output.ListNotifications(ops, cfg.Organisation, flags.OutputFormat, flags.Prettyprint)
+		return
 	}
 
 	// List repositories

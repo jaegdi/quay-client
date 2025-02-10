@@ -30,6 +30,7 @@ Options:
   -kc, --kubeconfig        Path to the kubeconfig file
   -pp, --prettyprint       Enable prettyprint
   -gu, --getusers          Get user information
+  -gn, --getnotifications  Get notifications
   -v, --verify             Enable print verify infos
   --create-config, -cc     Create a example config in $HOME/.config/qc/config.yaml
 
@@ -37,6 +38,7 @@ Examples:
   qc -o my-org -r my-repo -t my-tag -d
   qc -o my-org -r my-repo -x ".*test.*"
   qc -o my-org -gu
+  qc -gn
   qc -c
   qc -m
 `)

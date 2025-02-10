@@ -176,6 +176,25 @@ func ListOrganizations(ops *operations.Operations, outputFormat string, prettypr
 	OutputData(orgs, outputFormat, prettyprint, PrintList, "Organizations")
 }
 
+// ListNotifications lists all notifications.
+// If an error occurs, the error message will be printed and the program will exit with status code 1.
+// The output will be printed in the specified format.
+// If prettyprint is true, the output will be formatted with indentation.
+// Otherwise, the output will be compact.
+//
+// Parameters:
+// ops: The operations object used to list the notifications.
+// outputFormat: The output format: text, json, or yaml.
+// prettyprint: A boolean flag indicating whether to pretty-print the output.
+func ListNotifications(ops *operations.Operations, org, outputFormat string, prettyprint bool) {
+	notifications, err := ops.ListNotifications(org)
+	if err != nil {
+		fmt.Printf("Failed to list notifications: %v\n", err)
+		os.Exit(1)
+	}
+	OutputData(notifications, outputFormat, prettyprint, PrintNotifications, "Notifications")
+}
+
 // OutputData prints the given data in the specified format.
 // If prettyprint is true, the output will be formatted with indentation.
 // Otherwise, the output will be compact.
@@ -441,4 +460,43 @@ func PrintList(data interface{}, headline string) {
 	default:
 		fmt.Printf("Unsupported data type: %T\n", v)
 	}
+}
+
+// PrintNotifications prints the notifications in a table format.
+// The output includes the ID, title, description, and creation date of each notification.
+//
+// Parameters:
+// data: The notifications to be printed.
+// headline: A string that will be printed before the data.
+func PrintNotifications(data interface{}, headline string) {
+	notifications, ok := data.([]operations.Notification)
+	if !ok {
+		fmt.Printf("Unsupported data type for PrintNotifications: %T\n", data)
+		return
+	}
+
+	// define formatting strings
+	line := "-----------------------------"
+	fmt.Println(headline)
+	fmt.Printf("%-5s  %-30s  %-50s  %-20s\n", "ID", "Title", "Description", "Created At")
+	fmt.Printf("%-5s  %-30s  %-50s  %-20s\n", line, line, line, line)
+
+	// print data
+	for _, notification := range notifications {
+		fmt.Printf("%-5d  %-30s  %-50s  %-20s\n", notification.ID, notification.Title, notification.Description, notification.CreatedAt)
+	}
+}
+
+func DisplayNotifications(ops *operations.Operations, org string) error {
+	notifications, err := ops.ListNotifications(org)
+	if err != nil {
+		return fmt.Errorf("failed to list notifications: %v", err)
+	}
+
+	for _, notification := range notifications {
+		fmt.Printf("ID: %d, Title: %s, Description: %s, CreatedAt: %s\n",
+			notification.ID, notification.Title, notification.Description, notification.CreatedAt)
+	}
+
+	return nil
 }
