@@ -8,6 +8,7 @@ import (
 
 // Flags represents the command line flags
 type Flags struct {
+	OutputFile       string
 	ShowMan          bool
 	SecretName       string
 	SecretNamespace  string
@@ -36,6 +37,8 @@ var flags Flags
 
 // ParseFlags parses the command line flags
 func ParseFlags() *Flags {
+	flag.StringVar(&flags.OutputFile, "output-file", "", "Write output to file instead of stdout")
+    flag.StringVar(&flags.OutputFile, "of", "", "Write output to file instead of stdout")
 
 	flag.BoolVar(&flags.ShowMan, "man", false, "Show manual page")
 	flag.BoolVar(&flags.ShowMan, "m", false, "Show manual page")

@@ -24,7 +24,7 @@ type Operations struct {
 // Repository represents a repository in the Quay registry.
 type Repository struct {
 	Name string       `json:"name"`
-	Tags []TagDetails `json:"tags, omitempty"`
+	Tags []TagDetails `json:"tags,omitempty"`
 }
 
 // Organization represents an organization in the Quay registry.
@@ -225,7 +225,7 @@ func (o *Operations) ListOrganizationRepositories(org string, details bool) (Org
 	var orgs OrgSet
 	orgs.Organizations = append(orgs.Organizations, Organization{Name: org})
 
-	for oi, _ := range orgs.Organizations {
+	for oi := range orgs.Organizations {
 		for _, repo := range result.Repositories {
 			orgs.Organizations[oi].Repositories = append(orgs.Organizations[oi].Repositories, repo)
 		}
@@ -527,13 +527,13 @@ func getHighestScoreAndSeverity(features *[]VulnerabilityInfo) (float64, string)
 	blanklines := regexp.MustCompile(`\n\s*\n`)
 	linebreaks := regexp.MustCompile(`\\n`)
 
-	for i, _ := range *features {
+	for i := range *features {
 		for _, score := range (*features)[i].BaseScores {
 			if score > highestScore {
 				highestScore = score
 			}
 		}
-		for j, _ := range (*features)[i].Vulnerabilities {
+		for j := range (*features)[i].Vulnerabilities {
 			(*features)[i].Vulnerabilities[j].Description = longlines.ReplaceAllString((*features)[i].Vulnerabilities[j].Description, ".\n")
 			(*features)[i].Vulnerabilities[j].Description = blanklines.ReplaceAllString((*features)[i].Vulnerabilities[j].Description, "\n")
 			(*features)[i].Vulnerabilities[j].Description = linebreaks.ReplaceAllString((*features)[i].Vulnerabilities[j].Description, "\n")

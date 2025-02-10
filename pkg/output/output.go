@@ -208,6 +208,15 @@ func ListNotifications(ops *operations.Operations, org, outputFormat string, pre
 //	prettyprint: A boolean flag indicating whether to pretty-print the output.
 //	printFunc: A function that prints the data in the desired format.
 //	headline: A string that will be printed before the data.
+// WriteToFileOrStdout writes the given content either to a file if outputFile is specified,
+// or to stdout if outputFile is empty
+func WriteToFileOrStdout(content []byte, outputFile string) error {
+    if outputFile != "" {
+        return os.WriteFile(outputFile, content, 0644)
+    }
+    fmt.Print(string(content))
+    return nil
+}
 func OutputData(data interface{}, format string, prettyprint bool, printFunc func(interface{}, string), headline string) {
 	switch format {
 	case "json":
@@ -229,7 +238,7 @@ func OutputData(data interface{}, format string, prettyprint bool, printFunc fun
 //
 //	data: The data to be marshaled into JSON.
 //	prettyprint: A boolean flag indicating whether to pretty-print the JSON output.
-func OutputJSON(data interface{}, prettyprint bool) {
+func OutputJSON(data interface{}, prettyprint bool) error {
 	var output []byte
 	var err error
 	// if prettyprint {
@@ -241,13 +250,14 @@ func OutputJSON(data interface{}, prettyprint bool) {
 	if err != nil {
 		fmt.Printf("Failed to marshal JSON: %v\n", err)
 		fmt.Println(data)
-	} else {
-		if prettyprint {
-			PrintWithJQ(output)
-		} else {
-			fmt.Println(string(output))
-		}
-	}
+		return err
+    }
+    
+    if prettyprint {
+        return PrintWithJQ(output)
+    }
+    flags := cli.GetFlags()
+    return WriteToFileOrStdout(output, flags.OutputFile)
 }
 
 // OutputYAML marshals the given data into YAML format and prints it.
@@ -279,16 +289,18 @@ func OutputYAML(data interface{}, prettyprint bool) {
 //
 // Parameters:
 // data: The data to be printed with jq.
-func PrintWithJQ(data []byte) {
+func PrintWithJQ(data []byte) error {
 	cmd := exec.Command("jq", ".")
 	cmd.Stdin = bytes.NewReader(data)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
-		fmt.Printf("Failed to run jq: %v\n", err)
-		fmt.Println(string(data))
-	}
+        fmt.Printf("Failed to run jq: %v\n", err)
+        flags := cli.GetFlags()
+        return WriteToFileOrStdout(data, flags.OutputFile)
+    }
+    return nil
 }
 
 // PrintWithYQ prints the given data using the yq command-line tool.

@@ -49,6 +49,8 @@ OPTIONS
 
     -f, --format
         Output format: text, json, or yaml (default: yaml)
+        -of, --output-file
+            Write output to file instead of stdout
 
     --ft
         Set Output format to text

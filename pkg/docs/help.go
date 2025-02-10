@@ -21,8 +21,9 @@ Options:
   -x, --regex              Regex pattern to filter repositories
   -u, --registry           Quay registry URL (default: $QUAYREGISTRY or https://quay.io)
   -f, --format             Output format: text, json, or yaml (default: yaml)
-  --ft                     Set Output format to text
-  --fj                     Set Output format to json
+  -of, --output-file       Write output to file instead of stdout
+  -ft                      Set Output format to text
+  -fj                      Set Output format to json
   -i, --details            Show detailed information
   -c, --curlreq            Output a curl commandline with the Bearer token to query the Quay registry
   --sev                    Filter vulnerabilities by severity [low, medium, high, critical]
