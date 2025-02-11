@@ -12,6 +12,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/jaegdi/quay-client/pkg/auth"
+	"github.com/jaegdi/quay-client/pkg/cli"
 	"github.com/jaegdi/quay-client/pkg/operations"
 )
 
@@ -208,14 +209,15 @@ func ListNotifications(ops *operations.Operations, org, outputFormat string, pre
 //	prettyprint: A boolean flag indicating whether to pretty-print the output.
 //	printFunc: A function that prints the data in the desired format.
 //	headline: A string that will be printed before the data.
+//
 // WriteToFileOrStdout writes the given content either to a file if outputFile is specified,
 // or to stdout if outputFile is empty
 func WriteToFileOrStdout(content []byte, outputFile string) error {
-    if outputFile != "" {
-        return os.WriteFile(outputFile, content, 0644)
-    }
-    fmt.Print(string(content))
-    return nil
+	if outputFile != "" {
+		return os.WriteFile(outputFile, content, 0644)
+	}
+	fmt.Print(string(content))
+	return nil
 }
 func OutputData(data interface{}, format string, prettyprint bool, printFunc func(interface{}, string), headline string) {
 	switch format {
@@ -251,13 +253,13 @@ func OutputJSON(data interface{}, prettyprint bool) error {
 		fmt.Printf("Failed to marshal JSON: %v\n", err)
 		fmt.Println(data)
 		return err
-    }
-    
-    if prettyprint {
-        return PrintWithJQ(output)
-    }
-    flags := cli.GetFlags()
-    return WriteToFileOrStdout(output, flags.OutputFile)
+	}
+
+	if prettyprint {
+		return PrintWithJQ(output)
+	}
+	flags := cli.GetFlags()
+	return WriteToFileOrStdout(output, flags.OutputFile)
 }
 
 // OutputYAML marshals the given data into YAML format and prints it.
@@ -296,11 +298,11 @@ func PrintWithJQ(data []byte) error {
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
-        fmt.Printf("Failed to run jq: %v\n", err)
-        flags := cli.GetFlags()
-        return WriteToFileOrStdout(data, flags.OutputFile)
-    }
-    return nil
+		fmt.Printf("Failed to run jq: %v\n", err)
+		flags := cli.GetFlags()
+		return WriteToFileOrStdout(data, flags.OutputFile)
+	}
+	return nil
 }
 
 // PrintWithYQ prints the given data using the yq command-line tool.

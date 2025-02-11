@@ -44,7 +44,7 @@ OPTIONS
     -x, --regex
         Regex pattern to filter repositories
 
-    -u, --registry
+    -url, --registryurl
         Quay registry URL (default: $QUAYREGISTRY or https://quay.io)
 
     -f, --format
@@ -87,6 +87,12 @@ OPTIONS
 
     --create-config, -cc
         Create a example config in $HOME/.config/qc/config.yaml
+
+    -u, --username
+        Quay username
+
+    -p, --password
+        Quay password
 
 EXAMPLES
     qc -o my-org -r my-repo -t my-tag -d

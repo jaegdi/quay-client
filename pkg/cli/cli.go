@@ -31,6 +31,8 @@ type Flags struct {
 	Verify           bool
 	CreateConfig     bool
 	GetNotifications bool
+	Username         string
+	Password         string
 }
 
 var flags Flags
@@ -38,7 +40,7 @@ var flags Flags
 // ParseFlags parses the command line flags
 func ParseFlags() *Flags {
 	flag.StringVar(&flags.OutputFile, "output-file", "", "Write output to file instead of stdout")
-    flag.StringVar(&flags.OutputFile, "of", "", "Write output to file instead of stdout")
+	flag.StringVar(&flags.OutputFile, "of", "", "Write output to file instead of stdout")
 
 	flag.BoolVar(&flags.ShowMan, "man", false, "Show manual page")
 	flag.BoolVar(&flags.ShowMan, "m", false, "Show manual page")
@@ -64,8 +66,8 @@ func ParseFlags() *Flags {
 	flag.StringVar(&flags.Regex, "regex", "", "Regex pattern to filter repositories")
 	flag.StringVar(&flags.Regex, "x", "", "Regex pattern to filter repositories")
 
-	flag.StringVar(&flags.QuayURL, "registry", "", "Quay registry URL (default: $QUAYREGISTRY or https://quay.io)")
-	flag.StringVar(&flags.QuayURL, "u", "", "Quay registry URL (default: $QUAYREGISTRY or https://quay.io)")
+	flag.StringVar(&flags.QuayURL, "registryurl", "", "Quay registry URL (default: $QUAYREGISTRY or https://quay.io)")
+	flag.StringVar(&flags.QuayURL, "url", "", "Quay registry URL (default: $QUAYREGISTRY or https://quay.io)")
 
 	flag.StringVar(&flags.OutputFormat, "format", "yaml", "Output format: text, json, or yaml, default is yaml")
 	flag.StringVar(&flags.OutputFormat, "f", "yaml", "Output format: text, json, or yaml, default is yaml")
@@ -99,8 +101,14 @@ func ParseFlags() *Flags {
 	flag.BoolVar(&flags.CreateConfig, "create-config", false, "Create a example config in $HOME/.config/qc/config.yaml")
 	flag.BoolVar(&flags.CreateConfig, "cc", false, "Create a example config in $HOME/.config/qc/config.yaml")
 
-	flag.BoolVar(&flags.GetNotifications, "gn", false, "Get notifications")
 	flag.BoolVar(&flags.GetNotifications, "getnotifications", false, "Get notifications")
+	flag.BoolVar(&flags.GetNotifications, "gn", false, "Get notifications")
+
+	flag.StringVar(&flags.Username, "username", "", "Quay username")
+	flag.StringVar(&flags.Username, "u", "", "Quay username")
+
+	flag.StringVar(&flags.Password, "password", "", "Quay password")
+	flag.StringVar(&flags.Password, "p", "", "Quay password")
 
 	// Short flags
 

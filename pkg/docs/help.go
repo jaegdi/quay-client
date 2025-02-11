@@ -19,7 +19,7 @@ Options:
   -t, --tag                Tag name or regexp for tagname
   -d, --delete             Delete specified tag
   -x, --regex              Regex pattern to filter repositories
-  -u, --registry           Quay registry URL (default: $QUAYREGISTRY or https://quay.io)
+  -url, --registryurl      Quay registry URL (default: $QUAYREGISTRY or https://quay.io)
   -f, --format             Output format: text, json, or yaml (default: yaml)
   -of, --output-file       Write output to file instead of stdout
   -ft                      Set Output format to text
@@ -33,7 +33,9 @@ Options:
   -gu, --getusers          Get user information
   -gn, --getnotifications  Get notifications
   -v, --verify             Enable print verify infos
-  --create-config, -cc     Create a example config in $HOME/.config/qc/config.yaml
+  -cc, --create-config     Create a example config in $HOME/.config/qc/config.yaml
+  -u, --username           Quay username
+  -p, --password           Quay password
 
 Examples:
   qc -o my-org -r my-repo -t my-tag -d

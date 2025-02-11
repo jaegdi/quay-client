@@ -24,7 +24,7 @@ type Operations struct {
 // Repository represents a repository in the Quay registry.
 type Repository struct {
 	Name string       `json:"name"`
-	Tags []TagDetails `json:"tags,omitempty"`
+	Tags []TagDetails `json:"tags, omitempty"`
 }
 
 // Organization represents an organization in the Quay registry.
@@ -206,11 +206,13 @@ func (o *Operations) ListOrganizationRepositories(org string, details bool) (Org
 	// query the repositories of org
 	resp, err := o.client.Get(url)
 	if err != nil {
+		fmt.Println("ListOrganizationRepositories failed to GET response: ", err)
 		return OrgSet{}, err
 	}
 	defer resp.Body.Close()
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
+		fmt.Println("ListOrganizationRepositories failed to read response body: ", err)
 		return OrgSet{}, fmt.Errorf("failed to read response body: %v", err)
 	}
 	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
@@ -218,14 +220,17 @@ func (o *Operations) ListOrganizationRepositories(org string, details bool) (Org
 		Repositories []Repository
 	}
 	if err := json.NewDecoder(bytes.NewBuffer(bodyBytes)).Decode(&result); err != nil {
-		// fmt.Printf("Response body: %s\n", string(bodyBytes))
+		fmt.Printf("Response body: %s\n", string(bodyBytes))
+		if strings.Contains(string(bodyBytes), "<html>") {
+			return OrgSet{}, fmt.Errorf("received HTML response, likely an error page")
+		}
 		return OrgSet{}, fmt.Errorf("failed to decode response: %v", err)
 	}
 
 	var orgs OrgSet
 	orgs.Organizations = append(orgs.Organizations, Organization{Name: org})
 
-	for oi := range orgs.Organizations {
+	for oi, _ := range orgs.Organizations {
 		for _, repo := range result.Repositories {
 			orgs.Organizations[oi].Repositories = append(orgs.Organizations[oi].Repositories, repo)
 		}
@@ -418,6 +423,9 @@ func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseSco
 	filteredTags := TagResults{}
 
 	if err := json.NewDecoder(bytes.NewBuffer(bodyBytes)).Decode(&result); err != nil {
+		if strings.Contains(string(bodyBytes), "<html>") {
+			return TagResults{}, fmt.Errorf("received HTML response, likely an error page")
+		}
 		return TagResults{}, fmt.Errorf("failed to decode response: %v", err)
 	}
 
@@ -527,13 +535,13 @@ func getHighestScoreAndSeverity(features *[]VulnerabilityInfo) (float64, string)
 	blanklines := regexp.MustCompile(`\n\s*\n`)
 	linebreaks := regexp.MustCompile(`\\n`)
 
-	for i := range *features {
+	for i, _ := range *features {
 		for _, score := range (*features)[i].BaseScores {
 			if score > highestScore {
 				highestScore = score
 			}
 		}
-		for j := range (*features)[i].Vulnerabilities {
+		for j, _ := range (*features)[i].Vulnerabilities {
 			(*features)[i].Vulnerabilities[j].Description = longlines.ReplaceAllString((*features)[i].Vulnerabilities[j].Description, ".\n")
 			(*features)[i].Vulnerabilities[j].Description = blanklines.ReplaceAllString((*features)[i].Vulnerabilities[j].Description, "\n")
 			(*features)[i].Vulnerabilities[j].Description = linebreaks.ReplaceAllString((*features)[i].Vulnerabilities[j].Description, "\n")
@@ -610,6 +618,9 @@ func (o *Operations) getVulnerabilities(org string, repo string, digest string) 
 
 	result := Vulnerabilities{}
 	if err := json.NewDecoder(bytes.NewBuffer(bodyBytes)).Decode(&result); err != nil {
+		if strings.Contains(string(bodyBytes), "<html>") {
+			return []VulnerabilityInfo{}, "", fmt.Errorf("received HTML response, likely an error page")
+		}
 		return []VulnerabilityInfo{}, "", fmt.Errorf("failed to decode response: %v", err)
 	}
 
@@ -696,7 +707,15 @@ func (o *Operations) ListNotifications(org string) ([]Notification, error) {
 		var result struct {
 			Notifications []Notification `json:"notifications"`
 		}
-		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response body: %v", err)
+		}
+		resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		if err := json.NewDecoder(bytes.NewBuffer(bodyBytes)).Decode(&result); err != nil {
+			if strings.Contains(string(bodyBytes), "<html>") {
+				return nil, fmt.Errorf("received HTML response, likely an error page")
+			}
 			return nil, fmt.Errorf("failed to decode response: %v", err)
 		}
 
