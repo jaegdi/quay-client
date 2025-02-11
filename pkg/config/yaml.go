@@ -47,12 +47,12 @@ func LoadYamlConfig() (*YamlConfig, error) {
 
 	yamlConfig := YamlConfig{
 		Registry: Registry{
-			URL:             "https://quay.io",
-			KubeconfigPath:  "$KUBECONFIG",
-			SecretName:      "Name of secret for quay admin user",
-			SecretNamespace: "Namespace of secret for quay admin user",
+			URL:             "",
+			KubeconfigPath:  "",
+			SecretName:      "",
+			SecretNamespace: "",
 		},
-		Organisation: "optional set here the default organisation",
+		Organisation: "",
 	}
 
 	// If no config file found, return default values

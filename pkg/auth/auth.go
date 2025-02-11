@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jaegdi/quay-client/pkg/cli"
 	"github.com/jaegdi/quay-client/pkg/config"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	// "k8s.io/client-go/kubernetes"
 )
 
 // Auth holds authentication information for Quay
@@ -44,27 +44,35 @@ type dockerConfigJSON struct {
 //	a pointer to the Auth instance
 //	an error if the authentication fails
 func NewAuth(cfg *config.Config) (*Auth, error) {
-	clientset, err := kubernetes.NewForConfig(cfg.K8sConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create kubernetes client: %v", err)
-	}
+	flags := cli.GetFlags()
+	if flags.Username != "" && flags.Password != "" {
+		return &Auth{
+			Username: flags.Username,
+			Password: flags.Password,
+		}, nil
+	} else {
+		clientset, err := kubernetes.NewForConfig(cfg.K8sConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create kubernetes client: %v", err)
+		}
 
-	secret, err := clientset.CoreV1().Secrets(cfg.SecretNamespace).Get(
-		context.Background(),
-		cfg.SecretName,
-		metav1.GetOptions{},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get secret: %v", err)
-	}
+		secret, err := clientset.CoreV1().Secrets(cfg.SecretNamespace).Get(
+			context.Background(),
+			cfg.SecretName,
+			metav1.GetOptions{},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get secret: %v", err)
+		}
 
-	switch secret.Type {
-	case corev1.SecretTypeDockerConfigJson:
-		return parseDockerConfig(secret)
-	case corev1.SecretTypeOpaque:
-		return parseOpaqueSecret(secret)
-	default:
-		return nil, fmt.Errorf("unsupported secret type: %v", secret.Type)
+		switch secret.Type {
+		case corev1.SecretTypeDockerConfigJson:
+			return parseDockerConfig(secret)
+		case corev1.SecretTypeOpaque:
+			return parseOpaqueSecret(secret)
+		default:
+			return nil, fmt.Errorf("unsupported secret type: %v", secret.Type)
+		}
 	}
 }
 

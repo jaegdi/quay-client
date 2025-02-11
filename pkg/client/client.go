@@ -3,11 +3,10 @@ package client
 import (
 	"encoding/base64"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/jaegdi/quay-client/pkg/auth"
-	"github.com/jaegdi/quay-client/pkg/cli"
+	"github.com/jaegdi/quay-client/pkg/helper"
 )
 
 // Client represents a Quay client
@@ -49,10 +48,7 @@ func NewClientWithBasicAuth(baseURL, username, password string) (*Client, error)
 // The function logs the request URL if the verify flag is set
 // The function sets the Authorization header based on the client's authentication method
 func (c *Client) Get(path string) (*http.Response, error) {
-	flags := cli.GetFlags()
-	if flags.Verify {
-		log.Println("GET: ", c.baseURL+path)
-	}
+	helper.Verify("GET: ", c.baseURL+path)
 	req, err := http.NewRequest("GET", c.baseURL+path, nil)
 	if err != nil {
 		return nil, err
@@ -93,13 +89,13 @@ func (c *Client) Delete(path string) (*http.Response, error) {
 // req: The http.Request instance to set the Authorization header on
 func (c *Client) setAuthHeader(req *http.Request) {
 	if c.username != "" && c.password != "" {
-		fmt.Println("Setting Basic auth with username:", c.username, c.password)
+		helper.Verify("Setting Basic auth with username:", c.username, c.password)
 		req.SetBasicAuth(c.username, c.password)
 	} else if c.auth != nil && c.auth.Token != "" {
-		fmt.Println("Setting Bearer token:", c.auth.Token)
+		helper.Verify("Setting Bearer token:", c.auth.Token)
 		req.Header.Set("Authorization", "Bearer "+c.auth.Token)
 	} else if c.auth != nil && c.auth.Username != "" && c.auth.Password != "" {
-		fmt.Println("Setting Basic auth with username:", c.auth.Username, c.auth.Password)
+		helper.Verify("Setting Basic auth with username:", c.auth.Username, c.auth.Password)
 		auth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", c.auth.Username, c.auth.Password)))
 		req.Header.Set("Authorization", "Basic "+auth)
 	}

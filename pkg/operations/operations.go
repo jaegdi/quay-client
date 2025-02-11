@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jaegdi/quay-client/pkg/cli"
 	"github.com/jaegdi/quay-client/pkg/client"
+	"github.com/jaegdi/quay-client/pkg/helper"
 )
 
 // Operations represents the operations that can be performed on the Quay API.
@@ -198,21 +198,18 @@ func (o *Operations) ListOrganizations() (OrgSet, error) {
 //   - error: An error if the operation fails at any point.
 func (o *Operations) ListOrganizationRepositories(org string, details bool) (OrgSet, error) {
 	onlyYoungest := details
-	flags := cli.GetFlags()
 	url := fmt.Sprintf("/repository?namespace=%s", org)
-	if flags.Verify {
-		log.Printf("ListOrganizationRepositories url: %v   organisation: %s\n", url, org)
-	}
+	helper.Verifyf("ListOrganizationRepositories url: %v   organisation: %s\n", url, org)
 	// query the repositories of org
 	resp, err := o.client.Get(url)
 	if err != nil {
-		fmt.Println("ListOrganizationRepositories failed to GET response: ", err)
+		helper.Verify("ListOrganizationRepositories failed to GET response: ", err)
 		return OrgSet{}, err
 	}
 	defer resp.Body.Close()
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("ListOrganizationRepositories failed to read response body: ", err)
+		helper.Verify("ListOrganizationRepositories failed to read response body: ", err)
 		return OrgSet{}, fmt.Errorf("failed to read response body: %v", err)
 	}
 	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
@@ -220,7 +217,7 @@ func (o *Operations) ListOrganizationRepositories(org string, details bool) (Org
 		Repositories []Repository
 	}
 	if err := json.NewDecoder(bytes.NewBuffer(bodyBytes)).Decode(&result); err != nil {
-		fmt.Printf("Response body: %s\n", string(bodyBytes))
+		helper.Verify("Response body: %s\n", string(bodyBytes))
 		if strings.Contains(string(bodyBytes), "<html>") {
 			return OrgSet{}, fmt.Errorf("received HTML response, likely an error page")
 		}
@@ -245,9 +242,7 @@ func (o *Operations) ListOrganizationRepositories(org string, details bool) (Org
 				// repo := orgs.Organizations[oi].Repositories[i]
 				go func(repo Repository) {
 					defer wg.Done()
-					if flags.Verify {
-						log.Println("ListOrganizationRepositories with org: ", org, " repo: ", orgs.Organizations[oi].Repositories[ri].Name)
-					}
+					helper.Verify("ListOrganizationRepositories with org: ", org, " repo: ", orgs.Organizations[oi].Repositories[ri].Name)
 					tags, err := o.ListRepositoryTags(org, repo.Name, "", "", 0, false, onlyYoungest)
 					if err != nil {
 						log.Printf("Failed to list tags for repository %s: %v", repo.Name, err)
@@ -401,10 +396,7 @@ func (o *Operations) GetUsers(org string) (Prototypes, error) {
 //  9. Returns the filtered tags and any error encountered.
 func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseScore float64, details bool, onlyYoungest bool) (TagResults, error) {
 	//  1. Constructs the URL for the repository tags.
-	flags := cli.GetFlags()
-	if flags.Verify {
-		log.Println("ListRepositoryTags with org: ", org, " repo: ", repo, " tag: ", tag, " severity: ", severity, " baseScore: ", baseScore, " details: ", details)
-	}
+	helper.Verify("ListRepositoryTags with org: ", org, " repo: ", repo, " tag: ", tag, " severity: ", severity, " baseScore: ", baseScore, " details: ", details)
 	url := fmt.Sprintf("/repository/%s/%s/tag", org, repo)
 	// 2. Sends a GET request to the URL.
 	resp, err := o.client.Get(url)

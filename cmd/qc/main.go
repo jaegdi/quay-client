@@ -44,9 +44,6 @@ func main() {
 	cfg, err := config.NewConfig(kubeconfig, flags.SecretName, flags.SecretNamespace, flags.QuayURL, flags.Org)
 	if err != nil && !flags.CreateConfig {
 		fmt.Printf("Failed to initialize config: %v\n", err)
-		if os.IsNotExist(err) {
-			fmt.Printf("Kubeconfig file not found: %v\n", kubeconfig)
-		}
 		os.Exit(1)
 	}
 
@@ -60,27 +57,20 @@ func main() {
 	}
 
 	// Initialize authentication
-	var quayClient *client.Client
-	var authInstance *auth.Auth
-	if flags.Username != "" && flags.Password != "" {
-		quayClient, err = client.NewClientWithBasicAuth(cfg.QuayURL, flags.Username, flags.Password)
-	} else {
-		authInstance, err = auth.NewAuth(cfg)
-		if err != nil {
-			fmt.Printf("Authentication failed: %v\n", err)
-			os.Exit(1)
-		}
-		quayClient = client.NewClient(authInstance, cfg.QuayURL)
+	auth, err := auth.NewAuth(cfg)
+	if err != nil {
+		fmt.Printf("Authentication failed: %v\n", err)
+		os.Exit(1)
 	}
-
 	// Output curl command if CurlReq flag is set
 	if flags.CurlReq {
-		output.OutputCurlCommand(authInstance, cfg.QuayURL)
+		output.OutputCurlCommand(auth, cfg.QuayURL)
 		return
 	}
-
+	// Create client and operations
+	client := client.NewClient(auth, cfg.QuayURL)
 	// Create operations
-	ops := operations.NewOperations(quayClient)
+	ops := operations.NewOperations(client)
 	// Perform operations based on flags
 	if flags.Delete {
 		//
