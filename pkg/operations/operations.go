@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jaegdi/quay-client/pkg/cli"
 	"github.com/jaegdi/quay-client/pkg/client"
 	"github.com/jaegdi/quay-client/pkg/helper"
 )
@@ -197,7 +198,8 @@ func (o *Operations) ListOrganizations() (OrgSet, error) {
 //   - OrgSet: A struct containing the list of repositories.
 //   - error: An error if the operation fails at any point.
 func (o *Operations) ListOrganizationRepositories(org string, details bool) (OrgSet, error) {
-	onlyYoungest := details
+	flags := cli.GetFlags()
+	onlyYoungest := details && flags.Tag == ""
 	url := fmt.Sprintf("/repository?namespace=%s", org)
 	helper.Verifyf("ListOrganizationRepositories url: %v   organisation: %s\n", url, org)
 	// query the repositories of org
@@ -217,7 +219,7 @@ func (o *Operations) ListOrganizationRepositories(org string, details bool) (Org
 		Repositories []Repository
 	}
 	if err := json.NewDecoder(bytes.NewBuffer(bodyBytes)).Decode(&result); err != nil {
-		helper.Verify("Response body: %s\n", string(bodyBytes))
+		helper.Verifyf("Response body: %s\n", string(bodyBytes))
 		if strings.Contains(string(bodyBytes), "<html>") {
 			return OrgSet{}, fmt.Errorf("received HTML response, likely an error page")
 		}
@@ -243,7 +245,7 @@ func (o *Operations) ListOrganizationRepositories(org string, details bool) (Org
 				go func(repo Repository) {
 					defer wg.Done()
 					helper.Verify("ListOrganizationRepositories with org: ", org, " repo: ", orgs.Organizations[oi].Repositories[ri].Name)
-					tags, err := o.ListRepositoryTags(org, repo.Name, "", "", 0, false, onlyYoungest)
+					tags, err := o.ListRepositoryTags(org, repo.Name, flags.Tag, "", 0, false, onlyYoungest)
 					if err != nil {
 						log.Printf("Failed to list tags for repository %s: %v", repo.Name, err)
 						return
