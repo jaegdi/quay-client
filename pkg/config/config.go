@@ -38,7 +38,12 @@ func GetKubeconfigPath(kubeconfigPath string) string {
 	return filepath.Join(os.Getenv("HOME"), ".kube", "config")
 }
 
-// SaveConfigToFile saves the configuration to a file in ~/.config/qc/config.yaml
+// SaveConfigToFile saves the given Config instance to a YAML file
+// The function creates a configuration directory in the user's home directory
+// and writes the configuration to a file named config.yaml.
+// If the provided Config instance is nil, the function writes default values to the file.
+// The function returns an error if the directory or file creation fails,
+// or if the encoding of the configuration to YAML fails.
 func SaveConfigToFile(config *Config) error {
 	configDir := filepath.Join(os.Getenv("HOME"), ".config", "qc")
 	if err := os.MkdirAll(configDir, os.ModePerm); err != nil {

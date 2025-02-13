@@ -25,7 +25,7 @@ type Operations struct {
 // Repository represents a repository in the Quay registry.
 type Repository struct {
 	Name string       `json:"name"`
-	Tags []TagDetails `json:"tags, omitempty"`
+	Tags []TagDetails `json:"tags,omitempty"`
 }
 
 // Organization represents an organization in the Quay registry.
@@ -219,6 +219,7 @@ func (o *Operations) ListOrganizationRepositories(org string, details bool) (Org
 		Repositories []Repository
 	}
 	if err := json.NewDecoder(bytes.NewBuffer(bodyBytes)).Decode(&result); err != nil {
+		// fmt.Printf("Response body: %s\n", string(bodyBytes))
 		helper.Verifyf("Response body: %s\n", string(bodyBytes))
 		if strings.Contains(string(bodyBytes), "<html>") {
 			return OrgSet{}, fmt.Errorf("received HTML response, likely an error page")
@@ -229,7 +230,7 @@ func (o *Operations) ListOrganizationRepositories(org string, details bool) (Org
 	var orgs OrgSet
 	orgs.Organizations = append(orgs.Organizations, Organization{Name: org})
 
-	for oi, _ := range orgs.Organizations {
+	for oi := range orgs.Organizations {
 		for _, repo := range result.Repositories {
 			orgs.Organizations[oi].Repositories = append(orgs.Organizations[oi].Repositories, repo)
 		}
@@ -296,16 +297,24 @@ func (o *Operations) ListRepositoriesByRegex(org, pattern string, details bool) 
 	if err != nil {
 		return OrgSet{}, err
 	}
-	var filtered OrgSet
+	filtered := OrgSet{}
 
 	for i, org := range orgs.Organizations {
 		filtered.Organizations = append(filtered.Organizations, org)
-		for j, repo := range orgs.Organizations[i].Repositories {
-			if regex.MatchString(orgs.Organizations[i].Repositories[j].Name) {
-				filtered.Organizations[i].Repositories = append(orgs.Organizations[i].Repositories, repo)
+		filtered.Organizations[i].Repositories = []Repository{}
+		// helper.Verifyf("\nStart filtered.Organizations with \n    org: %v\n", filtered.Organizations[i])
+		for j, repo := range org.Repositories {
+			if regex.MatchString(org.Repositories[j].Name) {
+				// r, _ := json.MarshalIndent(repo, "", "  ")
+				// helper.Verifyf("\n  befor append ListRepositoriesByRegex with \n    org: %v, \n    repo: %v\n", filtered, string(r))
+				filtered.Organizations[i].Repositories = append(filtered.Organizations[i].Repositories, repo)
+				// f, _ := json.MarshalIndent(filtered, "", "  ")
+				// helper.Verifyf("\n  after append filtered ListRepositoriesByRegex with \n    org: %v, \n    repo: %v\n", org.Name, string(f))
 			}
 		}
 	}
+	// f, _ := json.MarshalIndent(filtered, "", "  ")
+	// helper.Verifyf("\nfound repos: \n  %v\n", filtered)
 	return filtered, nil
 }
 
@@ -322,18 +331,22 @@ func (o *Operations) ListRepositoriesByRegex(org, pattern string, details bool) 
 //
 // Returns:
 //   - error: An error if the operation fails at any point.
-func (o *Operations) DeleteTag(org, repo, tag string) error {
+func (o *Operations) DeleteTag(org, repo, tag string) (string, error) {
 	path := fmt.Sprintf("/repository/%s/%s/tag/%s", org, repo, tag)
 	resp, err := o.client.Delete(path)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to delete tag: %s", resp.Status)
+		return "", fmt.Errorf("failed to delete tag: %s", resp.Status)
 	}
-	return nil
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %v", err)
+	}
+	return string(bodyBytes), nil
 }
 
 // GetUsers retrieves the user information for the specified organization.
@@ -413,9 +426,7 @@ func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseSco
 	}
 	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
-	result := TagResults{}
-	filteredTags := TagResults{}
-
+	var result, filteredTags TagResults
 	if err := json.NewDecoder(bytes.NewBuffer(bodyBytes)).Decode(&result); err != nil {
 		if strings.Contains(string(bodyBytes), "<html>") {
 			return TagResults{}, fmt.Errorf("received HTML response, likely an error page")
@@ -423,7 +434,7 @@ func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseSco
 		return TagResults{}, fmt.Errorf("failed to decode response: %v", err)
 	}
 
-	if onlyYoungest {
+	if onlyYoungest && len(result.Tags) > 0 {
 		// Find the youngest tag
 		if len(result.Tags) == 0 {
 			return TagResults{}, nil
@@ -434,21 +445,16 @@ func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseSco
 				youngestTag = tag
 			}
 		}
-		result.Tags = []TagDetails{}
-		result.Tags = append(result.Tags, youngestTag)
+		result.Tags = []TagDetails{youngestTag}
 	}
 	var wg sync.WaitGroup
 	tagChan := make(chan TagDetails, len(result.Tags))
 
 	// 4. Iterates over the tags and retrieves their vulnerabilities in parallel.
 	for i := range result.Tags {
-		if tag != "" {
-			matched, err := regexp.MatchString(tag, result.Tags[i].Name)
-			if err != nil || !matched {
-				continue
-			}
+		if !tagMatches(tag, result.Tags[i].Name) {
+			continue
 		}
-		// time.Sleep(100 * time.Millisecond)
 		wg.Add(1)
 		go func(tag TagDetails) {
 			defer wg.Done()
@@ -457,40 +463,14 @@ func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseSco
 				return
 			}
 
-			var filteredFeatures []VulnerabilityInfo
-			vulStruct := Vulnerabilities{}
-			for _, feature := range vul {
-				if len(feature.Vulnerabilities) > 0 || len(feature.BaseScores) > 0 || len(feature.CVEIds) > 0 {
-					filteredFeatures = append(filteredFeatures, feature)
-				}
-			}
-			vulStruct.Data = &struct {
-				Layer struct {
-					Features []VulnerabilityInfo `json:"Features,omitempty"`
-				} `json:"Layer,omitempty"`
-			}{}
-			vulStruct.Data.Layer.Features = filteredFeatures
+			filteredFeatures := filterVulnerabilities(vul)
+			vulStruct := createVulnerabilityStruct(filteredFeatures, status)
 
-			highestScore, highestSeverity := getHighestScoreAndSeverity(&filteredFeatures)
-			tag.HighestScore = highestScore
-			tag.HighestSeverity = highestSeverity
-
-			lastModified, err := time.Parse(time.RFC1123, tag.LastModified)
-			if err != nil {
-				log.Printf("Failed to parse LastModified: %v", err)
-				return
-			}
-			tag.Age = int(time.Since(lastModified).Hours() / 24)
-
-			vulStruct.Status = status
-			if details {
-				tag.Vulnerabilities = vulStruct
-			} else {
-				tag.Vulnerabilities.Status = status
-				tag.Vulnerabilities.Data = nil
-			}
+			tag.HighestScore, tag.HighestSeverity = getHighestScoreAndSeverity(&filteredFeatures)
+			tag.Age = calculateTagAge(tag.LastModified)
+			tag.Vulnerabilities = setVulnerabilityDetails(details, vulStruct)
 			tag.Repo = repo
-			tag.Size = float64(int(tag.Size/(1024*1024)*100)) / 100
+			tag.Size = formatTagSize(tag.Size)
 
 			if severity != "" || baseScore > 0 {
 				o.FilterTagsBySeverityAndBaseScore(tag, vulStruct, severity, baseScore, &filteredTags)
@@ -508,6 +488,116 @@ func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseSco
 	}
 
 	return filteredTags, nil
+}
+
+func tagMatches(tagPattern, tagString string) bool {
+	if tagPattern != "" {
+		if matched, err := regexp.MatchString(tagPattern, tagString); err != nil {
+			return false
+		} else {
+			return matched
+		}
+	}
+	return true
+}
+
+// filterVulnerabilities filters out features that do not have any vulnerabilities, base scores, or CVE IDs.
+// This function takes a slice of VulnerabilityInfo and returns a new slice containing only the features
+// that have at least one vulnerability, base score, or CVE ID. This feature can be useful to remove
+// features that do not contain any relevant vulnerability information.
+//
+// Parameters:
+//   - vul: A slice of VulnerabilityInfo containing the features to be filtered.
+//
+// Returns:
+//   - []VulnerabilityInfo: A new slice containing only the features with vulnerabilities, base scores, or CVE IDs.
+func filterVulnerabilities(vul []VulnerabilityInfo) []VulnerabilityInfo {
+	var filteredFeatures []VulnerabilityInfo
+	for _, feature := range vul {
+		if len(feature.Vulnerabilities) > 0 || len(feature.BaseScores) > 0 || len(feature.CVEIds) > 0 {
+			filteredFeatures = append(filteredFeatures, feature)
+		}
+	}
+	return filteredFeatures
+}
+
+// createVulnerabilityStruct creates a Vulnerabilities struct from the given filtered features and status.
+// This function takes a slice of filtered VulnerabilityInfo and a status string as input parameters and
+// returns a Vulnerabilities struct containing the filtered features and the status. This feature can be
+// useful to encapsulate the vulnerability information in a structured format for further processing or
+// display.
+//
+// Parameters:
+//   - filteredFeatures: A slice of VulnerabilityInfo containing the filtered features.
+//   - status: A string representing the status of the vulnerability scan.
+//
+// Returns:
+//   - Vulnerabilities: A struct containing the filtered features and the status.
+func createVulnerabilityStruct(filteredFeatures []VulnerabilityInfo, status string) Vulnerabilities {
+	return Vulnerabilities{
+		Status: status,
+		Data: &struct {
+			Layer struct {
+				Features []VulnerabilityInfo `json:"Features,omitempty"`
+			} `json:"Layer,omitempty"`
+		}{
+			Layer: struct {
+				Features []VulnerabilityInfo `json:"Features,omitempty"`
+			}{
+				Features: filteredFeatures,
+			},
+		},
+	}
+}
+
+// calculateTagAge calculates the age of a tag in days based on its last modified timestamp.
+// This function takes the last modified timestamp of a tag as a string in RFC1123 format and
+// returns the age of the tag in days. If the timestamp cannot be parsed, the function logs
+// an error and returns 0.
+//
+// Parameters:
+//   - lastModified: The last modified timestamp of the tag in RFC1123 format.
+//
+// Returns:
+//   - int: The age of the tag in days.
+func calculateTagAge(lastModified string) int {
+	lastModifiedTime, err := time.Parse(time.RFC1123, lastModified)
+	if err != nil {
+		log.Printf("Failed to parse LastModified: %v", err)
+		return 0
+	}
+	return int(time.Since(lastModifiedTime).Hours() / 24)
+}
+
+// setVulnerabilityDetails returns the vulnerability details based on the 'details' flag.
+// If 'details' is true, it returns the full vulnerability structure. Otherwise, it returns
+// only the status of the vulnerabilities.
+//
+// Parameters:
+//   - details: A boolean indicating whether to include detailed vulnerability information.
+//   - vulStruct: The full vulnerability structure.
+//
+// Returns:
+//   - Vulnerabilities: The vulnerability structure with or without details based on the 'details' flag.
+func setVulnerabilityDetails(details bool, vulStruct Vulnerabilities) Vulnerabilities {
+	if details {
+		return vulStruct
+	}
+	return Vulnerabilities{Status: vulStruct.Status}
+}
+
+// formatTagSize formats the size of a tag in megabytes with two decimal places.
+// This function takes the size of a tag in bytes as a float64 and returns the size
+// in megabytes, rounded to two decimal places. This feature can be useful to display
+// the size of a tag in a more human-readable format.
+//
+// Parameters:
+//   - size: The size of the tag in bytes.
+//
+// Returns:
+//   - float64: The size of the tag in megabytes, rounded to two decimal places.
+func formatTagSize(size float64) float64 {
+	return float64(int(size/(1024*1024)*100)) / 100
 }
 
 // getHighestScoreAndSeverity returns the highest base score and severity level from a list of VulnerabilityInfo.
@@ -529,17 +619,20 @@ func getHighestScoreAndSeverity(features *[]VulnerabilityInfo) (float64, string)
 	blanklines := regexp.MustCompile(`\n\s*\n`)
 	linebreaks := regexp.MustCompile(`\\n`)
 
-	for i, _ := range *features {
+	for i := range *features {
 		for _, score := range (*features)[i].BaseScores {
 			if score > highestScore {
 				highestScore = score
 			}
 		}
-		for j, _ := range (*features)[i].Vulnerabilities {
+		for j := range (*features)[i].Vulnerabilities {
+			// Format the vulnerability description by replacing certain patterns with newlines and spaces
 			(*features)[i].Vulnerabilities[j].Description = longlines.ReplaceAllString((*features)[i].Vulnerabilities[j].Description, ".\n")
 			(*features)[i].Vulnerabilities[j].Description = blanklines.ReplaceAllString((*features)[i].Vulnerabilities[j].Description, "\n")
 			(*features)[i].Vulnerabilities[j].Description = linebreaks.ReplaceAllString((*features)[i].Vulnerabilities[j].Description, "\n")
 			(*features)[i].Vulnerabilities[j].Description = strings.ReplaceAll((*features)[i].Vulnerabilities[j].Description, "*", "  *")
+
+			// Determine the highest severity level among the vulnerabilities
 			severity := strings.ToLower((*features)[i].Vulnerabilities[j].Severity)
 			if severityLevels[severity] > severityLevels[strings.ToLower(highestSeverity)] {
 				highestSeverity = (*features)[i].Vulnerabilities[j].Severity
@@ -641,11 +734,13 @@ func (o *Operations) FilterTagsBySeverityAndBaseScore(tag TagDetails, vulnerabil
 		for _, feature := range vulnerabilities.Data.Layer.Features {
 			filteredVulns := []FeatureVulnerabilities{}
 			for _, vuln := range feature.Vulnerabilities {
+				// Check if the vulnerability meets the severity and base score criteria
 				if (severity == "" || severityLevels[strings.ToLower(vuln.Severity)] >= severityLevels[strings.ToLower(severity)]) &&
 					(baseScore == 0 || anyBaseScoreAbove(feature.BaseScores, baseScore)) {
 					filteredVulns = append(filteredVulns, vuln)
 				}
 			}
+			// If there are any vulnerabilities that meet the criteria, add the feature to the filtered features
 			if len(filteredVulns) > 0 {
 				feature.Vulnerabilities = filteredVulns
 				filteredFeatures = append(filteredFeatures, feature)
@@ -676,6 +771,16 @@ func anyBaseScoreAbove(baseScores []float64, threshold float64) bool {
 }
 
 // ListNotifications retrieves the list of notifications from all repositories of an organization in the Quay registry.
+// This function takes the name of the organization as an input parameter and returns a list of notifications
+// associated with all repositories within this organization. Notifications provide information about various
+// events and activities related to the repositories, such as build statuses, security alerts, and other updates.
+//
+// Parameters:
+//   - org: The organization name.
+//
+// Returns:
+//   - []Notification: A slice containing the notifications from all repositories.
+//   - error: An error if the operation fails at any point.
 func (o *Operations) ListNotifications(org string) ([]Notification, error) {
 	orgSet, err := o.ListOrganizationRepositories(org, false)
 	if err != nil {
@@ -706,7 +811,7 @@ func (o *Operations) ListNotifications(org string) ([]Notification, error) {
 			return nil, fmt.Errorf("failed to read response body: %v", err)
 		}
 		resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-		if err := json.NewDecoder(bytes.NewBuffer(bodyBytes)).Decode(&result); err != nil {
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 			if strings.Contains(string(bodyBytes), "<html>") {
 				return nil, fmt.Errorf("received HTML response, likely an error page")
 			}

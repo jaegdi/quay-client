@@ -9,6 +9,7 @@ import (
 	"github.com/jaegdi/quay-client/pkg/client"
 	"github.com/jaegdi/quay-client/pkg/config"
 	"github.com/jaegdi/quay-client/pkg/docs"
+	"github.com/jaegdi/quay-client/pkg/helper"
 	"github.com/jaegdi/quay-client/pkg/operations"
 	"github.com/jaegdi/quay-client/pkg/output"
 )
@@ -106,9 +107,9 @@ func main() {
 			output.ListRepositoryTags(ops, cfg.Organisation, flags.Repo, flags.Tag, flags.Severity, flags.BaseScore, flags.Details, flags.OutputFormat, flags.Prettyprint)
 			return
 		}
-		if flags.Regex != "" {
-			// List repositories by regex
-			output.ListRepositoriesByRegex(ops, cfg.Organisation, flags.Regex, flags.OutputFormat, flags.Prettyprint, flags.Details)
+		if flags.RepoRegex != "" {
+			helper.Verify("List repositories by regex")
+			output.ListRepositoriesByRegex(ops, cfg.Organisation, flags.RepoRegex, flags.OutputFormat, flags.Prettyprint, flags.Details)
 			return
 		}
 		// List organization repositories

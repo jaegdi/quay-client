@@ -13,6 +13,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/jaegdi/quay-client/pkg/auth"
 	"github.com/jaegdi/quay-client/pkg/cli"
+	"github.com/jaegdi/quay-client/pkg/helper"
 	"github.com/jaegdi/quay-client/pkg/operations"
 )
 
@@ -41,12 +42,12 @@ func OutputCurlCommand(auth *auth.Auth, quayURL string) {
 // repo: The repository name.
 // tag: The tag name to be deleted.
 func DeleteTag(ops *operations.Operations, org, repo, tag string) {
-	err := ops.DeleteTag(org, repo, tag)
+	response, err := ops.DeleteTag(org, repo, tag)
 	if err != nil {
 		fmt.Printf("Failed to delete tag: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Successfully deleted tag %s from %s/%s\n", tag, org, repo)
+	fmt.Printf("Successfully deleted tag %s from %s/%s\n%s\n", tag, org, repo, response)
 }
 
 // GetUserInformation gets user information for the given organization.
@@ -115,6 +116,7 @@ func ListRepositoryTags(ops *operations.Operations, org, repo, tag, severity str
 // outputFormat: The output format: text, json, or yaml.
 // prettyprint: A boolean flag indicating whether to pretty-print the output.
 func ListRepositoriesByRegex(ops *operations.Operations, org, pattern, outputFormat string, prettyprint, details bool) {
+	helper.Verify("ListRepositoriesByRegex")
 	repos, err := ops.ListRepositoriesByRegex(org, pattern, details)
 	if err != nil {
 		fmt.Printf("Failed to list repositories filtered by regex: %v\n", err)
@@ -361,6 +363,19 @@ func PrintRepositoriyTags(data interface{}, headline string) {
 	}
 
 	// print data
+	printTagDetails(tags, headline, f)
+}
+
+// printTagDetails prints the details of tags in a formatted manner.
+// It includes information such as repository name, tag name, expiration status, vulnerability status, highest score, highest severity,
+// age in days, last modified date, size in MB, and digest.
+// If the headline does not contain "Overview", it also prints the vulnerabilities associated with each tag.
+//
+// Parameters:
+// tags: The tag results to be printed.
+// headline: A string that will be printed before the data.
+// f: The format string used for printing the tag details.
+func printTagDetails(tags operations.TagResults, headline string, f string) {
 	for _, tag := range tags.Tags {
 		// convert tag data
 		expired := "No"
@@ -440,7 +455,7 @@ func PrintList(data interface{}, headline string) {
 		fmt.Println(headline)
 		fmt.Println(line)
 		for _, e := range v {
-			fmt.Printf(e)
+			fmt.Print(e)
 		}
 	// print a list of Repositories
 	case operations.OrgSet:
@@ -501,6 +516,12 @@ func PrintNotifications(data interface{}, headline string) {
 	}
 }
 
+// DisplayNotifications retrieves and displays notifications for the given organization.
+// If an error occurs, it returns the error.
+//
+// Parameters:
+// ops: The operations object used to list the notifications.
+// org: The organization name.
 func DisplayNotifications(ops *operations.Operations, org string) error {
 	notifications, err := ops.ListNotifications(org)
 	if err != nil {

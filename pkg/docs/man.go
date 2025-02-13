@@ -41,7 +41,7 @@ OPTIONS
     -d, --delete
         Delete specified tag
 
-    -x, --regex
+    -rx, --reporegex
         Regex pattern to filter repositories
 
     -url, --registryurl
@@ -96,7 +96,7 @@ OPTIONS
 
 EXAMPLES
     qc -o my-org -r my-repo -t my-tag -d
-    qc -o my-org -r my-repo -x ".*test.*"
+    qc -o my-org -r my-repo -rx ".*test.*"
     qc -o my-org -gu
     qc -gn
     qc -c

@@ -18,7 +18,7 @@ Options:
   -r, --repository         Repository name
   -t, --tag                Tag name or regexp for tagname
   -d, --delete             Delete specified tag
-  -x, --regex              Regex pattern to filter repositories
+  -rx, --reporegex             Regex pattern to filter repositories
   -url, --registryurl      Quay registry URL (default: $QUAYREGISTRY or https://quay.io)
   -f, --format             Output format: text, json, or yaml (default: yaml)
   -of, --output-file       Write output to file instead of stdout
@@ -38,12 +38,14 @@ Options:
   -p, --password           Quay password
 
 Examples:
-  qc -o my-org -r my-repo -t my-tag -d
-  qc -o my-org -r my-repo -x ".*test.*"
-  qc -o my-org -gu
-  qc -gn
-  qc -c
-  qc -m
+  Delete a tag:                                    qc -o my-org -r my-repo -t my-tag -d
+  List repos by regex:                             qc -o my-org -r my-repo -rx ".*test.*"
+  List repo overview of org inkl vulnerabilities:  qc -o pkp -i -ft
+  List vulnerabilities of a repo:                  qc -o my-org -r my-repo -i [ft]
+  List users:                                      qc -o my-org -gu [ft]
+  List Notifications:                              qc -gn
+  Print curl cmd:                                  qc -c
+  Print man page:                                  qc -m
 `)
 	os.Exit(0)
 }

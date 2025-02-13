@@ -16,7 +16,7 @@ type Flags struct {
 	Repo             string
 	Tag              string
 	Delete           bool
-	Regex            string
+	RepoRegex        string
 	QuayURL          string
 	OutputFormat     string
 	OutputFormatText bool
@@ -63,8 +63,8 @@ func ParseFlags() *Flags {
 	flag.BoolVar(&flags.Delete, "delete", false, "Delete specified tag")
 	flag.BoolVar(&flags.Delete, "d", false, "Delete specified tag")
 
-	flag.StringVar(&flags.Regex, "regex", "", "Regex pattern to filter repositories")
-	flag.StringVar(&flags.Regex, "x", "", "Regex pattern to filter repositories")
+	flag.StringVar(&flags.RepoRegex, "reporegex", "", "Regex pattern to filter repositories")
+	flag.StringVar(&flags.RepoRegex, "rx", "", "Regex pattern to filter repositories")
 
 	flag.StringVar(&flags.QuayURL, "registryurl", "", "Quay registry URL (default: $QUAYREGISTRY or https://quay.io)")
 	flag.StringVar(&flags.QuayURL, "url", "", "Quay registry URL (default: $QUAYREGISTRY or https://quay.io)")
