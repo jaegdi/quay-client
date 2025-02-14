@@ -242,7 +242,7 @@ func (ops *Operations) ListOrganizationRepositories(org string, details bool) (O
 
 			for ri := range orgs.Organizations[oi].Repositories {
 				wg.Add(1)
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(1 * time.Millisecond)
 
 				// repo := orgs.Organizations[oi].Repositories[i]
 				go func(repo Repository) {
@@ -558,7 +558,7 @@ func (ops *Operations) ListRepositoryTags(org, repo, tag, severity string, baseS
 				tagChan <- tag
 			}
 		}(result.Tags[i])
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	wg.Wait()
