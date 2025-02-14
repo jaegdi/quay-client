@@ -33,6 +33,8 @@ type Flags struct {
 	GetNotifications bool
 	Username         string
 	Password         string
+	FilterTags       bool
+	MinAge           int
 }
 
 var flags Flags
@@ -109,6 +111,12 @@ func ParseFlags() *Flags {
 
 	flag.StringVar(&flags.Password, "password", "", "Quay password")
 	flag.StringVar(&flags.Password, "p", "", "Quay password")
+
+	flag.BoolVar(&flags.FilterTags, "filter-delete-tags", false, "Create script to delete tags based on criteria")
+	flag.BoolVar(&flags.FilterTags, "fd", false, "Create script to delete tags based on criteria")
+
+	flag.IntVar(&flags.MinAge, "minage", 100, "Minimum age of tags in days")
+	flag.IntVar(&flags.MinAge, "a", 100, "Minimum age of tags in days")
 
 	// Short flags
 

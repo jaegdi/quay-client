@@ -11,13 +11,15 @@
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/qc/main.go",
             "args": [
-                // "-o", "pkp",
+                "-o", "pkp",
                 // "-repository", "apache-mod-auth-openidc",
-                // "-t", "0.7.5-0",
+                "-t", ".*",
                 // "-sev", "high",
-                "-kc", "/home/jaegdi/.kube/config-bash-4870",
-                // "-ft", "-i"
-                "-cc"
+                "-kc", "/home/jaegdi/.kube-yakuake/config-cid-scp0-4-6430",
+                // "-ft", "-i",
+                // "-cc",
+                "-rx", "adapter",
+                "-fd"
             ]
         }
     ]

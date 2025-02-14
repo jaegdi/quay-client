@@ -14,7 +14,9 @@ import (
 
 	"github.com/jaegdi/quay-client/pkg/cli"
 	"github.com/jaegdi/quay-client/pkg/client"
+	"github.com/jaegdi/quay-client/pkg/config"
 	"github.com/jaegdi/quay-client/pkg/helper"
+	"github.com/jaegdi/quay-client/pkg/imagetool"
 )
 
 // Operations represents the operations that can be performed on the Quay API.
@@ -146,16 +148,16 @@ func NewOperations(client *client.Client) *Operations {
 //
 // Returns:
 //   - OrgSet: A struct containing the list of organizations.
-//   - error: An error if the operation fails at any point.
+//   - error:  An error if the operation fails at any point.
 //
 // The function performs the following steps:
 //  1. Send a GET request to the /organization endpoint.
 //  2. Read and decode the response body into a list of Organization structs.
 //  3. Return the list of organizations and any error encountered.
-func (o *Operations) ListOrganizations() (OrgSet, error) {
+func (ops *Operations) ListOrganizations() (OrgSet, error) {
 	// resp, err := o.client.Get("/organization/")
 	//  /api/v1/superuser/organizations/
-	resp, err := o.client.Get("/superuser/organizations/")
+	resp, err := ops.client.Get("/superuser/organizations/")
 	// log.Printf("ListOrganizations resp.Body: %v\n", resp.Body)
 	if err != nil {
 		return OrgSet{}, err
@@ -196,14 +198,14 @@ func (o *Operations) ListOrganizations() (OrgSet, error) {
 //
 // Returns:
 //   - OrgSet: A struct containing the list of repositories.
-//   - error: An error if the operation fails at any point.
-func (o *Operations) ListOrganizationRepositories(org string, details bool) (OrgSet, error) {
+//   - error:  An error if the operation fails at any point.
+func (ops *Operations) ListOrganizationRepositories(org string, details bool) (OrgSet, error) {
 	flags := cli.GetFlags()
 	onlyYoungest := details && flags.Tag == ""
 	url := fmt.Sprintf("/repository?namespace=%s", org)
 	helper.Verifyf("ListOrganizationRepositories url: %v   organisation: %s\n", url, org)
 	// query the repositories of org
-	resp, err := o.client.Get(url)
+	resp, err := ops.client.Get(url)
 	if err != nil {
 		helper.Verify("ListOrganizationRepositories failed to GET response: ", err)
 		return OrgSet{}, err
@@ -240,13 +242,13 @@ func (o *Operations) ListOrganizationRepositories(org string, details bool) (Org
 
 			for ri := range orgs.Organizations[oi].Repositories {
 				wg.Add(1)
-				// time.Sleep(500 * time.Millisecond)
+				time.Sleep(10 * time.Millisecond)
 
 				// repo := orgs.Organizations[oi].Repositories[i]
 				go func(repo Repository) {
 					defer wg.Done()
 					helper.Verify("ListOrganizationRepositories with org: ", org, " repo: ", orgs.Organizations[oi].Repositories[ri].Name)
-					tags, err := o.ListRepositoryTags(org, repo.Name, flags.Tag, "", 0, false, onlyYoungest)
+					tags, err := ops.ListRepositoryTags(org, repo.Name, flags.Tag, "", 0, false, onlyYoungest)
 					if err != nil {
 						log.Printf("Failed to list tags for repository %s: %v", repo.Name, err)
 						return
@@ -287,9 +289,9 @@ func (o *Operations) ListOrganizationRepositories(org string, details bool) (Org
 //
 // Returns:
 //   - OrgSet: A struct containing the filtered list of repositories.
-//   - error: An error if the operation fails at any point.
-func (o *Operations) ListRepositoriesByRegex(org, pattern string, details bool) (OrgSet, error) {
-	orgs, err := o.ListOrganizationRepositories(org, details)
+//   - error:  An error if the operation fails at any point.
+func (ops *Operations) ListRepositoriesByRegex(org, pattern string, details bool) (OrgSet, error) {
+	orgs, err := ops.ListOrganizationRepositories(org, details)
 	if err != nil {
 		return OrgSet{}, err
 	}
@@ -325,15 +327,15 @@ func (o *Operations) ListRepositoriesByRegex(org, pattern string, details bool) 
 // such as versions or releases. This feature can be useful to remove outdated or unused tags from a repository.
 //
 // Parameters:
-//   - org: The organization name.
-//   - repo: The repository name.
-//   - tag: The tag name to delete.
+//   - org:   The organization name.
+//   - repo:  The repository name.
+//   - tag:   The tag name to delete.
 //
 // Returns:
 //   - error: An error if the operation fails at any point.
-func (o *Operations) DeleteTag(org, repo, tag string) (string, error) {
+func (ops *Operations) DeleteTag(org, repo, tag string) (string, error) {
 	path := fmt.Sprintf("/repository/%s/%s/tag/%s", org, repo, tag)
-	resp, err := o.client.Delete(path)
+	resp, err := ops.client.Delete(path)
 	if err != nil {
 		return "", err
 	}
@@ -349,6 +351,73 @@ func (o *Operations) DeleteTag(org, repo, tag string) (string, error) {
 	return string(bodyBytes), nil
 }
 
+// GenShellCmdsToDeleteTags filters tags based on repository name, tag name, severity, or age criteria and prints a command for each found tag.
+// This function takes the organization name, repository name pattern, tag name pattern, severity level, and age as input parameters.
+// It filters the tags based on the provided criteria and prints a command for each found tag in the format:
+// "qc -o org -r repo -t tag -d     # Age: x, Severity ....".
+//
+// Parameters:
+//   - org:         The organization name.
+//   - repoPattern: The regex pattern to filter repository names.
+//   - tagPattern:  The regex pattern to filter tag names.
+//   - severity:    The minimum severity level to filter tags.
+//   - minage: 	    The maximum age of the tags in days.
+//
+// Returns:
+//   - error: An error if the operation fails at any point.
+func (ops *Operations) GenShellCmdsToDeleteTags(org string, cfg *config.Config, repoPattern, tagPattern, severity string, minage int) error {
+	orgs, err := ops.ListOrganizationRepositories(org, true)
+	if err != nil {
+		return err
+	}
+	repoRegex, err := regexp.Compile(repoPattern)
+	if err != nil {
+		return err
+	}
+	tagRegex, err := regexp.Compile(tagPattern)
+	if err != nil {
+		return err
+	}
+
+	for _, org := range orgs.Organizations {
+		// read all used image tags of this org
+		usedTags, err := imagetool.LoadImageToolData(org.Name)
+		if err != nil {
+			return err
+		}
+		for _, repo := range org.Repositories {
+			if !repoRegex.MatchString(repo.Name) {
+				continue
+			}
+			for _, tag := range repo.Tags {
+				// check, if tag is used somewhere in the clusters
+				ClusterRegistryUrl := fmt.Sprintf("%s-images/%s:%s", org.Name, repo.Name, tag.Name)
+				QuayRegistryUrl := fmt.Sprintf("%s/%s/%s:%s", cfg.QuayURL, org.Name, repo.Name, tag.Name)
+				if cluster, namespace, regurl, found := imagetool.IsRegistryUrlFound(usedTags, ClusterRegistryUrl); found {
+					fmt.Printf("# %s/%s:%s is used in cluster %s in namespace %s - Url: %s\n", org.Name, repo.Name, tag.Name, cluster, namespace, regurl)
+					continue
+				}
+				if cluster, namespace, regurl, found := imagetool.IsRegistryUrlFound(usedTags, QuayRegistryUrl); found {
+					fmt.Printf("# %s/%s:%s is used in cluster %s in namespace %s - Url: %s\n", org.Name, repo.Name, tag.Name, cluster, namespace, regurl)
+					continue
+				}
+				if !tagRegex.MatchString(tag.Name) {
+					continue
+				}
+				if severity != "" && severityLevels[strings.ToLower(tag.HighestSeverity)] < severityLevels[strings.ToLower(severity)] {
+					continue
+				}
+				if minage > 0 && tag.Age < minage {
+					continue
+				}
+				s := fmt.Sprintf("qc -o %-5s -r %-36s -t %-25s -d", org.Name, tag.Repo, tag.Name)
+				fmt.Printf("%-80s   # Age: %4d, Severity %-10s\n", s, tag.Age, tag.HighestSeverity)
+			}
+		}
+	}
+	return nil
+}
+
 // GetUsers retrieves the user information for the specified organization.
 // GetUsers retrieves the user information for the specified organization.
 // This function takes the name of the organization as an input parameter and returns a list of
@@ -361,10 +430,10 @@ func (o *Operations) DeleteTag(org, repo, tag string) (string, error) {
 //
 // Returns:
 //   - Prototypes: A struct containing the user information.
-//   - error: An error if the operation fails at any point.
-func (o *Operations) GetUsers(org string) (Prototypes, error) {
+//   - error:      An error if the operation fails at any point.
+func (ops *Operations) GetUsers(org string) (Prototypes, error) {
 	path := fmt.Sprintf("/organization/%s/prototypes", org)
-	resp, err := o.client.Get(path)
+	resp, err := ops.client.Get(path)
 	if err != nil {
 		return Prototypes{}, err
 	}
@@ -389,10 +458,10 @@ func (o *Operations) GetUsers(org string) (Prototypes, error) {
 // to identify.
 //
 // Parameters:
-//   - org: The organization name.
-//   - repo: The repository name.
-//   - details: A boolean indicating whether to include detailed vulnerability information.
-//   - severity: A string specifying the severity level to filter tags.
+//   - org:       The organization name.
+//   - repo:      The repository name.
+//   - details:   A boolean indicating whether to include detailed vulnerability information.
+//   - severity:  A string specifying the severity level to filter tags.
 //   - baseScore: A float64 specifying the base score to filter tags.
 //
 // Returns:
@@ -409,12 +478,12 @@ func (o *Operations) GetUsers(org string) (Prototypes, error) {
 //  7. Optionally includes detailed vulnerability information based on the 'details' parameter.
 //  8. Filters the tags based on the specified severity and base score.
 //  9. Returns the filtered tags and any error encountered.
-func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseScore float64, details bool, onlyYoungest bool) (TagResults, error) {
+func (ops *Operations) ListRepositoryTags(org, repo, tag, severity string, baseScore float64, details bool, onlyYoungest bool) (TagResults, error) {
 	//  1. Constructs the URL for the repository tags.
 	helper.Verify("ListRepositoryTags with org: ", org, " repo: ", repo, " tag: ", tag, " severity: ", severity, " baseScore: ", baseScore, " details: ", details)
 	url := fmt.Sprintf("/repository/%s/%s/tag", org, repo)
 	// 2. Sends a GET request to the URL.
-	resp, err := o.client.Get(url)
+	resp, err := ops.client.Get(url)
 	if err != nil {
 		return TagResults{}, fmt.Errorf("failed to GET response: %v", err)
 	}
@@ -458,26 +527,38 @@ func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseSco
 		wg.Add(1)
 		go func(tag TagDetails) {
 			defer wg.Done()
-			vul, status, err := o.getVulnerabilities(org, repo, tag.Digest)
+			// Retrieve vulnerabilities for the given tag
+			vul, status, err := ops.getVulnerabilities(org, repo, tag.Digest)
 			if err != nil || status != "scanned" {
+				// If there's an error or the status is not "scanned", skip this tag
 				return
 			}
 
+			// Filter out features that do not have any vulnerabilities, base scores, or CVE IDs
 			filteredFeatures := filterVulnerabilities(vul)
+			// Create a Vulnerabilities struct from the filtered features and status
 			vulStruct := createVulnerabilityStruct(filteredFeatures, status)
 
+			// Calculate the highest base score and severity level from the filtered features
 			tag.HighestScore, tag.HighestSeverity = getHighestScoreAndSeverity(&filteredFeatures)
+			// Calculate the age of the tag in days based on its last modified timestamp
 			tag.Age = calculateTagAge(tag.LastModified)
+			// Set the vulnerability details based on the 'details' flag
 			tag.Vulnerabilities = setVulnerabilityDetails(details, vulStruct)
+			// Set the repository name for the tag
 			tag.Repo = repo
+			// Format the size of the tag in megabytes with two decimal places
 			tag.Size = formatTagSize(tag.Size)
 
+			// If severity or baseScore filtering is required, filter the tags accordingly
 			if severity != "" || baseScore > 0 {
-				o.FilterTagsBySeverityAndBaseScore(tag, vulStruct, severity, baseScore, &filteredTags)
+				ops.FilterTagsBySeverityAndBaseScore(tag, vulStruct, severity, baseScore, &filteredTags)
 			} else {
+				// Otherwise, send the tag to the tagChan channel
 				tagChan <- tag
 			}
 		}(result.Tags[i])
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	wg.Wait()
@@ -490,6 +571,18 @@ func (o *Operations) ListRepositoryTags(org, repo, tag, severity string, baseSco
 	return filteredTags, nil
 }
 
+// tagMatches checks if a tag string matches a given regex pattern.
+// This function takes a regex pattern and a tag string as input parameters and returns a boolean
+// indicating whether the tag string matches the pattern. If the pattern is empty, the function
+// returns true, indicating that all tags match. If the pattern is not empty, the function uses
+// the regexp.MatchString function to check for a match and returns the result.
+//
+// Parameters:
+//   - tagPattern: The regex pattern to match against the tag string.
+//   - tagString:  The tag string to be matched.
+//
+// Returns:
+//   - bool: true if the tag string matches the pattern, false otherwise.
 func tagMatches(tagPattern, tagString string) bool {
 	if tagPattern != "" {
 		if matched, err := regexp.MatchString(tagPattern, tagString); err != nil {
@@ -529,7 +622,7 @@ func filterVulnerabilities(vul []VulnerabilityInfo) []VulnerabilityInfo {
 //
 // Parameters:
 //   - filteredFeatures: A slice of VulnerabilityInfo containing the filtered features.
-//   - status: A string representing the status of the vulnerability scan.
+//   - status:           A string representing the status of the vulnerability scan.
 //
 // Returns:
 //   - Vulnerabilities: A struct containing the filtered features and the status.
@@ -574,7 +667,7 @@ func calculateTagAge(lastModified string) int {
 // only the status of the vulnerabilities.
 //
 // Parameters:
-//   - details: A boolean indicating whether to include detailed vulnerability information.
+//   - details:   A boolean indicating whether to include detailed vulnerability information.
 //   - vulStruct: The full vulnerability structure.
 //
 // Returns:
@@ -611,7 +704,7 @@ func formatTagSize(size float64) float64 {
 // Returns:
 //
 //	float64: The highest base score among all vulnerabilities.
-//	string: The highest severity level among all vulnerabilities.
+//	string:  The highest severity level among all vulnerabilities.
 func getHighestScoreAndSeverity(features *[]VulnerabilityInfo) (float64, string) {
 	var highestScore float64
 	var highestSeverity string
@@ -642,8 +735,8 @@ func getHighestScoreAndSeverity(features *[]VulnerabilityInfo) (float64, string)
 	return highestScore, highestSeverity
 }
 
-// CollectVulnerabilities collects and returns a list of VulnerabilityInfo from the given vulnerabilities.
-// CollectVulnerabilities collects and returns a list of VulnerabilityInfo from the given vulnerabilities.
+// collectVulnerabilities collects and returns a list of VulnerabilityInfo from the given vulnerabilities.
+// collectVulnerabilities collects and returns a list of VulnerabilityInfo from the given vulnerabilities.
 // This function takes a Vulnerabilities struct as input and returns a list of VulnerabilityInfo structs
 // containing the vulnerabilities found in the data. The function iterates over the features of the data
 // and checks if any of the vulnerability-related fields are non-empty. If any fields are non-empty, the
@@ -655,7 +748,7 @@ func getHighestScoreAndSeverity(features *[]VulnerabilityInfo) (float64, string)
 //
 // Returns:
 //   - []VulnerabilityInfo: A list of VulnerabilityInfo containing the vulnerabilities found.
-func CollectVulnerabilities(data Vulnerabilities) []VulnerabilityInfo {
+func collectVulnerabilities(data Vulnerabilities) []VulnerabilityInfo {
 	var vulns []VulnerabilityInfo
 
 	if data.Data != nil {
@@ -680,8 +773,8 @@ func CollectVulnerabilities(data Vulnerabilities) []VulnerabilityInfo {
 //
 // Parameters:
 //
-//   - org: The organization name.
-//   - repo: The repository name.
+//   - org:    The organization name.
+//   - repo:   The repository name.
 //   - digest: The digest of the repository manifest.
 //
 // Returns:
@@ -689,9 +782,9 @@ func CollectVulnerabilities(data Vulnerabilities) []VulnerabilityInfo {
 //	A slice of VulnerabilityInfo containing the vulnerabilities found.
 //	A string representing the status of the vulnerability scan.
 //	An error if the request fails or the response cannot be processed.
-func (o *Operations) getVulnerabilities(org string, repo string, digest string) ([]VulnerabilityInfo, string, error) {
+func (ops *Operations) getVulnerabilities(org string, repo string, digest string) ([]VulnerabilityInfo, string, error) {
 	url := fmt.Sprintf("/repository/%s/%s/manifest/%s/security", org, repo, digest)
-	resp, err := o.client.Get(url)
+	resp, err := ops.client.Get(url)
 	if err != nil {
 		return []VulnerabilityInfo{}, "", err
 	}
@@ -712,7 +805,7 @@ func (o *Operations) getVulnerabilities(org string, repo string, digest string) 
 	}
 
 	// You can call CollectVulnerabilities here if needed
-	vulnerabilities := CollectVulnerabilities(result)
+	vulnerabilities := collectVulnerabilities(result)
 	return vulnerabilities, result.Status, nil
 }
 
@@ -720,15 +813,15 @@ func (o *Operations) getVulnerabilities(org string, repo string, digest string) 
 // It updates the filteredTags with tags that meet the criteria.
 //
 // Parameters:
-//   - tag: The tag details to be filtered.
+//   - tag:             The tag details to be filtered.
 //   - vulnerabilities: The vulnerabilities associated with the tag.
-//   - severity: The minimum severity level to filter vulnerabilities. If empty, all severities are considered.
-//   - baseScore: The minimum base score to filter vulnerabilities. If zero, all base scores are considered.
-//   - filteredTags: The result set where tags that meet the criteria are appended.
+//   - severity:        The minimum severity level to filter vulnerabilities. If empty, all severities are considered.
+//   - baseScore:       The minimum base score to filter vulnerabilities. If zero, all base scores are considered.
+//   - filteredTags:    The result set where tags that meet the criteria are appended.
 //
 // The function iterates through the features of the vulnerabilities and filters out those that do not meet the severity
 // and base score criteria. If any features remain after filtering, the tag is added to the filteredTags result set.
-func (o *Operations) FilterTagsBySeverityAndBaseScore(tag TagDetails, vulnerabilities Vulnerabilities, severity string, baseScore float64, filteredTags *TagResults) {
+func (ops *Operations) FilterTagsBySeverityAndBaseScore(tag TagDetails, vulnerabilities Vulnerabilities, severity string, baseScore float64, filteredTags *TagResults) {
 	filteredFeatures := []VulnerabilityInfo{}
 	if vulnerabilities.Data != nil {
 		for _, feature := range vulnerabilities.Data.Layer.Features {
@@ -757,7 +850,7 @@ func (o *Operations) FilterTagsBySeverityAndBaseScore(tag TagDetails, vulnerabil
 //
 // Parameters:
 // - baseScores: A slice of float64 values representing the base scores to be checked.
-// - threshold: A float64 value representing the threshold to compare against.
+// - threshold:  A float64 value representing the threshold to compare against.
 //
 // Returns:
 // - bool: true if any score in baseScores is greater than the threshold, false otherwise.
@@ -780,9 +873,9 @@ func anyBaseScoreAbove(baseScores []float64, threshold float64) bool {
 //
 // Returns:
 //   - []Notification: A slice containing the notifications from all repositories.
-//   - error: An error if the operation fails at any point.
-func (o *Operations) ListNotifications(org string) ([]Notification, error) {
-	orgSet, err := o.ListOrganizationRepositories(org, false)
+//   - error:          An error if the operation fails at any point.
+func (ops *Operations) ListNotifications(org string) ([]Notification, error) {
+	orgSet, err := ops.ListOrganizationRepositories(org, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list repositories: %v", err)
 	}
@@ -790,7 +883,7 @@ func (o *Operations) ListNotifications(org string) ([]Notification, error) {
 	var allNotifications []Notification
 	for _, repository := range orgSet.Organizations[0].Repositories {
 		url := fmt.Sprintf("/repository/%s/%s/notification/", org, repository.Name)
-		resp, err := o.client.Get(url)
+		resp, err := ops.client.Get(url)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get notifications for repository %s: %v", repository.Name, err)
 		}

@@ -102,6 +102,11 @@ func main() {
 
 	// List repositories
 	if cfg.Organisation != "" {
+		// Filter tags to delete
+		if flags.FilterTags {
+			output.GenShellCmdsToDeleteTagsWrapper(ops, cfg)
+			return
+		}
 		if flags.Repo != "" {
 			// List repository tags
 			output.ListRepositoryTags(ops, cfg.Organisation, flags.Repo, flags.Tag, flags.Severity, flags.BaseScore, flags.Details, flags.OutputFormat, flags.Prettyprint)
