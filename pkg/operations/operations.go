@@ -308,7 +308,7 @@ func (ops *Operations) ListRepositoriesByRegex(org, pattern string, details bool
 		for j, repo := range org.Repositories {
 			if regex.MatchString(org.Repositories[j].Name) {
 				// r, _ := json.MarshalIndent(repo, "", "  ")
-				// helper.Verifyf("\n  befor append ListRepositoriesByRegex with \n    org: %v, \n    repo: %v\n", filtered, string(r))
+				// helper.Verifyf("\n  before append ListRepositoriesByRegex with \n    org: %v, \n    repo: %v\n", filtered, string(r))
 				filtered.Organizations[i].Repositories = append(filtered.Organizations[i].Repositories, repo)
 				// f, _ := json.MarshalIndent(filtered, "", "  ")
 				// helper.Verifyf("\n  after append filtered ListRepositoriesByRegex with \n    org: %v, \n    repo: %v\n", org.Name, string(f))

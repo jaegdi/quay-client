@@ -101,7 +101,7 @@ func ListRepositoryTags(ops *operations.Operations, org, repo, tag, severity str
 		fmt.Printf("No tags found for %s/%s\n", org, repo)
 		return
 	}
-	OutputData(tags, outputFormat, prettyprint, PrintRepositoriyTags, "RepositoryTags")
+	OutputData(tags, outputFormat, prettyprint, PrintRepositoryTags, "RepositoryTags")
 }
 
 // ListRepositoriesByRegex lists all repositories of the given organization that match the given regex pattern.
@@ -150,7 +150,7 @@ func ListOrganizationRepositories(ops *operations.Operations, org string, output
 				tags = append(tags, repo.Tags...)
 			}
 			taglist := operations.TagResults{Tags: tags}
-			OutputData(taglist, outputFormat, prettyprint, PrintRepositoriyTags, "Overview - From every repo of org: "+org.Name+", the youngest tag of each repo.")
+			OutputData(taglist, outputFormat, prettyprint, PrintRepositoryTags, "Overview - From every repo of org: "+org.Name+", the youngest tag of each repo.")
 		}
 	} else {
 		OutputData(repos, outputFormat, prettyprint, PrintList, "Repositories")
@@ -326,7 +326,7 @@ func PrintWithYQ(data []byte) {
 	}
 }
 
-// PrintRepositoriyTags prints the tags of a repository in a table format.
+// PrintRepositoryTags prints the tags of a repository in a table format.
 // The tags are sorted by age, and the vulnerabilities are printed in a nested format.
 // The output includes the repository name, tag name, expiration status, vulnerability status, highest score, highest severity,
 // age in days, last modified date, size in MB, and digest.
@@ -334,14 +334,14 @@ func PrintWithYQ(data []byte) {
 // Parameters:
 // data: The tag results to be printed.
 // headline: A string that will be printed before the data.
-func PrintRepositoriyTags(data interface{}, headline string) {
+func PrintRepositoryTags(data interface{}, headline string) {
 	tags, ok := data.(operations.TagResults)
 	if !ok {
-		fmt.Printf("Unsupported data type for PrintRepositoriyTags: %T\n", data)
+		fmt.Printf("Unsupported data type for PrintRepositoryTags: %T\n", data)
 		return
 	}
 
-	// define formating strings
+	// define formatting strings
 	line := "-----------------------------"
 	fmt.Println(headline)
 	fmt.Printf("%206.206s\n", strings.Repeat(line, 8))
@@ -425,7 +425,7 @@ func printTagDetails(tags operations.TagResults, headline string, f string) {
 func PrintUsers(data interface{}, headline string) {
 	users := data.(operations.Prototypes)
 
-	// define formating strings
+	// define formatting strings
 	line := "-----------------------------"
 	fmt.Println(headline)
 	fmt.Println(strings.Repeat(line, 3))
