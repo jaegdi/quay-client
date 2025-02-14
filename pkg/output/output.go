@@ -13,6 +13,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/jaegdi/quay-client/pkg/auth"
 	"github.com/jaegdi/quay-client/pkg/cli"
+	"github.com/jaegdi/quay-client/pkg/config"
 	"github.com/jaegdi/quay-client/pkg/helper"
 	"github.com/jaegdi/quay-client/pkg/operations"
 )
@@ -534,4 +535,22 @@ func DisplayNotifications(ops *operations.Operations, org string) error {
 	}
 
 	return nil
+}
+
+// GenShellCmdsToDeleteTagsWrapper is a wrapper function for GenShellCmdsToDeleteTags.
+// It retrieves the necessary parameters from the CLI flags and calls the GenShellCmdsToDeleteTags function.
+//
+// Parameters:
+// ops: The operations object used to filter and print the tags.
+func GenShellCmdsToDeleteTagsWrapper(ops *operations.Operations, cfg *config.Config) {
+	flags := cli.GetFlags()
+	if flags.Org == "" || flags.RepoRegex == "" || flags.Tag == "" {
+		fmt.Printf("Organisation, repository regex, and tag regex are required to filter and print tags\n")
+		os.Exit(1)
+	}
+	err := ops.GenShellCmdsToDeleteTags(flags.Org, cfg, flags.RepoRegex, flags.Tag, flags.Severity, flags.MinAge)
+	if err != nil {
+		fmt.Printf("Failed to filter and print tags: %v\n", err)
+		os.Exit(1)
+	}
 }

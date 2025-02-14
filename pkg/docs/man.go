@@ -41,6 +41,12 @@ OPTIONS
     -d, --delete
         Delete specified tag
 
+    -fd, --filter-delete-tags
+        Generate shell script to delete tags based on criterias org name, repo name, minage
+
+    -a, --minage
+        Minimum age of tags to delete
+
     -rx, --reporegex
         Regex pattern to filter repositories
 
@@ -95,12 +101,18 @@ OPTIONS
         Quay password
 
 EXAMPLES
-    qc -o my-org -r my-repo -t my-tag -d
-    qc -o my-org -r my-repo -rx ".*test.*"
-    qc -o my-org -gu
-    qc -gn
-    qc -c
-    qc -m
+
+  List repos by regex:                             qc -o my-org -r my-repo -rx ".*test.*"
+  List repo overview of org inkl vulnerabilities:  qc -o pkp -i -ft
+  List vulnerabilities of a repo:                  qc -o my-org -r my-repo -i [ft]
+  List users:                                      qc -o my-org -gu [ft]
+  List Notifications:                              qc -gn
+  Print curl cmd:                                  qc -c
+  Print man page:                                  qc -m
+
+  Generate shellscript to delete tags:             qc -o my-org -fd tag-pattern -a
+  Delete a tag:                                    qc -o my-org -r my-repo -t my-tag -d
+
 `)
 	os.Exit(0)
 }
