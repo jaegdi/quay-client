@@ -16,6 +16,8 @@ SYNOPSIS
     qc [OPTIONS]
 
 DESCRIPTION
+    The Quay Client Command Line Tool (qc) uses the Quay API to interact with the Quay registry.
+
     The Quay Client Command Line Tool (qc) allows you to interact with the Quay registry.
     You can perform various operations such as listing organizations, repositories, tags and
     their vulnerabilities, deleting tags, and retrieving user information.
@@ -68,10 +70,7 @@ EXAMPLES
 
   Delete a tag:                                    qc -o my-org -r my-repo -t my-tag -d
   eg.                                              qc -o pkp  -r vertragsverwaltung-service  -t 4.23.0-SNAPSHOT-0  -d
-<<<<<<< HEAD
 
-=======
->>>>>>> 884a599ae1fc68eaee660ed62abe2c5e062c3313
   Print curl cmd:                                  qc -c
   Print man page:                                  qc -m
 

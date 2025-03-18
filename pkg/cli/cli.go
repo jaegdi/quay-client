@@ -39,7 +39,7 @@ type Flags struct {
 
 var flags Flags
 
-// ParseFlags parses the command line flags
+// ParseFlags parses the command line flags, long and short flags are defined for each option.
 func ParseFlags() *Flags {
 	flag.StringVar(&flags.OutputFile, "output-file", "", "Write output to file instead of stdout")
 	flag.StringVar(&flags.OutputFile, "of", "", "Write output to file instead of stdout")
@@ -73,6 +73,7 @@ func ParseFlags() *Flags {
 
 	flag.StringVar(&flags.OutputFormat, "format", "yaml", "Output format: text, json, or yaml, default is yaml")
 	flag.StringVar(&flags.OutputFormat, "f", "yaml", "Output format: text, json, or yaml, default is yaml")
+
 	flag.BoolVar(&flags.OutputFormatText, "ft", false, "Set Output format to text")
 	flag.BoolVar(&flags.OutputFormatJson, "fj", false, "Set Output format to json")
 
@@ -97,9 +98,6 @@ func ParseFlags() *Flags {
 	flag.BoolVar(&flags.GetUsers, "getusers", false, "Get user information")
 	flag.BoolVar(&flags.GetUsers, "gu", false, "Get user information")
 
-	flag.BoolVar(&flags.Verify, "verify", false, "Enable print verify infos")
-	flag.BoolVar(&flags.Verify, "v", false, "Enable verify")
-
 	flag.BoolVar(&flags.CreateConfig, "create-config", false, "Create a example config in $HOME/.config/qc/config.yaml")
 	flag.BoolVar(&flags.CreateConfig, "cc", false, "Create a example config in $HOME/.config/qc/config.yaml")
 
@@ -118,7 +116,8 @@ func ParseFlags() *Flags {
 	flag.IntVar(&flags.MinAge, "minage", 100, "Minimum age of tags in days")
 	flag.IntVar(&flags.MinAge, "a", 100, "Minimum age of tags in days")
 
-	// Short flags
+	flag.BoolVar(&flags.Verify, "verify", false, "Enable print verify infos")
+	flag.BoolVar(&flags.Verify, "v", false, "Enable verify")
 
 	flag.Usage = docs.ShowHelpPage
 	flag.Parse()

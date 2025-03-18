@@ -107,7 +107,7 @@ func main() {
 			output.GenShellCmdsToDeleteTagsWrapper(ops, cfg)
 			return
 		}
-		if flags.Repo != "" {
+		if flags.Repo != "" && flags.RepoRegex == "" {
 			// List repository tags
 			output.ListRepositoryTags(ops, cfg.Organisation, flags.Repo, flags.Tag, flags.Severity, flags.BaseScore, flags.Details, flags.OutputFormat, flags.Prettyprint)
 			return
