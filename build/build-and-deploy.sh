@@ -84,7 +84,7 @@ shift $((OPTIND-1))    # remove parsed options and args from $@ list
 
 if [ "$tagversion" == 'newest' ]; then
     tagversion="$(get-git-tag.sh)"
-    prompt -p "# Do you want to checkout the tag $tagversion? [y/N]" answer
+    read -p "# Do you want to checkout the tag $tagversion? [y/N]" answer
     if [[ ! $answer =~ ^[Yy] ]]; then
         tagversion='latest'
         echo "# Then i build with git tag 'latest'"

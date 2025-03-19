@@ -37,7 +37,7 @@ RUN rm -f go.mod go.sum dist/quay-client* \
  && go mod tidy \
  && mkdir -p dist \
  && echo "######## Now building the binary ##########" \
- && if go build -v -o ./dist cmd/qc/main.go ; then echo "######## Binary built successfully ##########"; fi
+ && if go build -v -o ./dist/qc cmd/qc/main.go ; then echo "######## Binary built successfully ##########"; fi
 
 # Set the entrypoint to the built binary
 CMD ["sleep", "infinity"]
