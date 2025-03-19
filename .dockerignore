@@ -1,0 +1,7 @@
+/.tekton
+/.trunk
+/.vscode
+/build
+/dist/qc*
+/go.mod
+/go.sum
