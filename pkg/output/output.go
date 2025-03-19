@@ -345,8 +345,8 @@ func PrintRepositoryTags(data interface{}, headline string) {
 	line := "-----------------------------"
 	fmt.Println(headline)
 	fmt.Printf("%206.206s\n", strings.Repeat(line, 8))
-	f := "%-30.30s  %-20.20s  %-7.7s  %-9.9s  %5.2f  %-10.10s  %7d  %-19.19s  %10.2f  %s\n"
-	fh := "%-30.30s  %-20.20s  %-7.7s  %-9.9s  %-5.5s  %-10.10s  %7.7s  %-19.19s  %10.10s  %-71.71s\n"
+	f := "%-30.30s  %-20.20s  %-7.7s  %-9.9s  %6.2f  %-10.10s  %7d  %-19.19s  %10.2f  %s\n"
+	fh := "%-30.30s  %-20.20s  %-7.7s  %-9.9s  %-6.6s  %-10.10s  %7.7s  %-19.19s  %10.10s  %-71.71s\n"
 
 	// print header
 	fmt.Printf(fh, "Repo", "Tag", "Expired", "Status", "Score", "Severity", "Age [D]", "LastModified", "Size [Mb]", "Digest")
