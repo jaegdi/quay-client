@@ -26,3 +26,5 @@ go.work.sum
 
 /qc
 pkp-quay-scan.txt
+dist/qc
+dist/qc*
